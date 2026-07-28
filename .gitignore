@@ -18,5 +18,6 @@ Thumbs.db
 
 # Large project files
 data/raw/
+data/processed/
 models/
 outputs/
