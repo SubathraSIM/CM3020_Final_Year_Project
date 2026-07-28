@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Editor settings
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Large project files
+data/raw/
+models/
+outputs/
