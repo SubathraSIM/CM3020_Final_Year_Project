@@ -1,0 +1,10 @@
+PySide6>=6.8
+torch
+transformers
+accelerate
+librosa
+soundfile
+opencv-python
+Pillow
+imageio-ffmpeg
+numpy

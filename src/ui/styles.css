@@ -1,0 +1,1099 @@
+* {
+    font-family: "Segoe UI";
+}
+
+QMainWindow {
+    background-color: #EEF3FB;
+}
+
+QWidget {
+    color: #0F172A;
+}
+
+QLabel {
+    color: #0F172A;
+    background-color: transparent;
+}
+
+
+/* =========================================
+   LOGIN AND REGISTRATION
+   ========================================= */
+
+#appCard {
+    background-color: transparent;
+}
+
+#brandPanel {
+    background-color: #05080B;
+    border-top-left-radius: 24px;
+    border-bottom-left-radius: 24px;
+}
+
+#heartMark {
+    color: #F43F5E;
+    font-size: 92px;
+    font-weight: bold;
+}
+
+#brandName {
+    color: #FFFFFF;
+    font-size: 40px;
+    font-weight: bold;
+}
+
+#brandTagline {
+    color: #93A4B3;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#formPanel {
+    background-color: #FFFFFF;
+    border-top-right-radius: 24px;
+    border-bottom-right-radius: 24px;
+}
+
+#formTitle {
+    color: #0F172A;
+    font-size: 27px;
+    font-weight: bold;
+}
+
+#formSubtitle {
+    color: #64748B;
+    font-size: 14px;
+}
+
+#fieldLabel {
+    color: #334155;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QLineEdit {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+}
+
+QLineEdit:focus {
+    background-color: #F5F8FF;
+    border: 2px solid #2563EB;
+}
+
+#primaryButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#primaryButton:hover {
+    background-color: #1D4ED8;
+}
+
+#primaryButton:pressed {
+    background-color: #1E40AF;
+}
+
+#primaryButton:disabled {
+    background-color: #94A3B8;
+    color: #E2E8F0;
+}
+
+#secondaryButton {
+    background-color: transparent;
+    color: #2563EB;
+    border: 2px solid #2563EB;
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#secondaryButton:hover {
+    background-color: #EFF4FF;
+}
+
+#secondaryButton:pressed {
+    background-color: #DBE7FF;
+}
+
+#dividerLine {
+    background-color: #E2E8F0;
+    border: none;
+}
+
+#dividerLabel {
+    color: #94A3B8;
+    font-size: 12px;
+}
+
+
+/* =========================================
+   STATUS MESSAGES
+   ========================================= */
+
+#statusMessage {
+    border-radius: 10px;
+    padding: 8px 11px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#statusMessage[statusType="error"] {
+    background-color: #FEE2E2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+}
+
+#statusMessage[statusType="success"] {
+    background-color: #DCFCE7;
+    color: #166534;
+    border: 1px solid #BBF7D0;
+}
+
+
+/* =========================================
+   HOME PAGE
+   ========================================= */
+
+#homeWrapper {
+    background-color: #EEF3FB;
+}
+
+#homeContent {
+    background-color: #F8FAFC;
+}
+
+
+/* ---------- Sidebar ---------- */
+
+#sideBar {
+    background-color: #05080B;
+    border: none;
+}
+
+#sideBrand {
+    color: #F43F5E;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#navButton {
+    background-color: transparent;
+    color: #CBD5E1;
+    border: none;
+    border-radius: 12px;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI";
+    font-weight: bold;
+}
+
+#navButton[expanded="false"] {
+    text-align: center;
+    padding: 0;
+    font-size: 20px;
+}
+
+#navButton[expanded="true"] {
+    text-align: left;
+    padding-left: 18px;
+    font-size: 14px;
+}
+
+#navButton:hover {
+    background-color: #172554;
+    color: #FFFFFF;
+}
+
+#navButton[active="true"] {
+    background-color: #2563EB;
+    color: #FFFFFF;
+}
+
+
+/* ---------- Home header ---------- */
+
+#homeBrand {
+    color: #0F172A;
+    font-size: 23px;
+    font-weight: bold;
+}
+
+#homeHeart {
+    color: #F43F5E;
+    font-size: 27px;
+    font-weight: bold;
+}
+
+#welcomeLabel {
+    color: #475569;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+
+/* ---------- Home hero ---------- */
+
+#heroCard {
+    background-color: #172554;
+    border: 1px solid #1E3A8A;
+    border-radius: 24px;
+}
+
+#heroEyebrow {
+    color: #93C5FD;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#heroTitle {
+    color: #FFFFFF;
+    font-size: 31px;
+    font-weight: bold;
+}
+
+#heroDescription {
+    color: #CBD5E1;
+    font-size: 14px;
+}
+
+#startCheckInButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border: 1px solid #60A5FA;
+    border-radius: 13px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#startCheckInButton:hover {
+    background-color: #3B82F6;
+}
+
+#startCheckInButton:pressed {
+    background-color: #1E40AF;
+}
+
+#privacyNote {
+    color: #94A3B8;
+    font-size: 11px;
+}
+
+#heroVisualCircle {
+    background-color: #1E3A8A;
+    border: 2px solid #60A5FA;
+    border-radius: 75px;
+}
+
+#heroVisualHeart {
+    color: #F43F5E;
+    font-size: 58px;
+    font-weight: bold;
+}
+
+#heroVisualText {
+    color: #BFDBFE;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+
+/* ---------- Feature cards ---------- */
+
+#sectionTitle {
+    color: #0F172A;
+    font-size: 19px;
+    font-weight: bold;
+}
+
+#featureCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 18px;
+}
+
+#featureCard:hover {
+    background-color: #F8FAFF;
+    border: 1px solid #93C5FD;
+}
+
+#featureIcon {
+    background-color: #EFF6FF;
+    color: #2563EB;
+    border: 1px solid #DBEAFE;
+    border-radius: 12px;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI";
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#featureTitle {
+    color: #0F172A;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+#featureDescription {
+    color: #64748B;
+    font-size: 12px;
+}
+
+
+/* ---------- Floating help button ---------- */
+
+#floatingHelpButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border: 4px solid #FFFFFF;
+    border-radius: 29px;
+    font-size: 23px;
+    font-weight: bold;
+}
+
+#floatingHelpButton:hover {
+    background-color: #1D4ED8;
+}
+
+#floatingHelpButton:pressed {
+    background-color: #1E40AF;
+}
+
+
+/* =========================================
+   CONSENT DIALOG
+   ========================================= */
+
+QDialog {
+    background-color: #EEF3FB;
+}
+
+#consentCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 24px;
+}
+
+#consentHeart {
+    color: #F43F5E;
+    font-size: 42px;
+    font-weight: bold;
+}
+
+#consentTitle {
+    color: #0F172A;
+    font-size: 27px;
+    font-weight: bold;
+}
+
+#consentSubtitle {
+    color: #64748B;
+    font-size: 14px;
+}
+
+#disclaimerText {
+    background-color: #F8FAFC;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 13px;
+}
+
+#consentCheckBox {
+    color: #334155;
+    font-size: 13px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: #FFFFFF;
+    border: 2px solid #CBD5E1;
+    border-radius: 4px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #2563EB;
+    border: 2px solid #2563EB;
+    border-radius: 4px;
+}
+
+
+/* =========================================
+   THANK-YOU DIALOG
+   ========================================= */
+
+#thankYouCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 24px;
+}
+
+#thankYouHeart {
+    color: #F43F5E;
+    font-size: 42px;
+    font-weight: bold;
+}
+
+#thankYouTitle {
+    color: #0F172A;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+#thankYouText {
+    color: #64748B;
+    font-size: 13px;
+}
+
+/* =========================================
+   CHECK-IN PAGE
+   ========================================= */
+
+#checkInPageContent,
+#processingPage,
+#resultPage {
+    background-color: #F8FAFC;
+}
+
+#checkInPageTitle {
+    color: #64748B;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#checkInIntroTitle,
+#resultPageTitle {
+    color: #0F172A;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#checkInIntroText {
+    color: #64748B;
+    font-size: 13px;
+}
+
+
+/* ---------- Recording and result cards ---------- */
+
+#videoCaptureCard,
+#checkInLowerCard,
+#transcriptCard,
+#resultSummaryCard,
+#resultScoreCard,
+#recommendationCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 18px;
+}
+
+#videoPreviewStack,
+#videoPlaceholder,
+#videoWidget {
+    background-color: #0F172A;
+    border: 1px solid #334155;
+}
+
+#videoPreviewText {
+    color: #CBD5E1;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#captureCardTitle {
+    color: #0F172A;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#captureCardText {
+    color: #64748B;
+    font-size: 11px;
+}
+
+#waveformWidget {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+}
+
+#transcriptEditor {
+    background-color: #F8FAFC;
+    color: #334155;
+    border: 1px solid #D7E1EC;
+    border-radius: 12px;
+    padding: 11px;
+    font-size: 12px;
+}
+
+#transcriptEditor:focus {
+    background-color: #FFFFFF;
+    border: 2px solid #2563EB;
+}
+
+#transcriptEditor[readOnly="true"] {
+    color: #64748B;
+}
+
+#recordingStatus {
+    color: #64748B;
+    font-size: 11px;
+}
+
+#recordingTimeSmall {
+    color: #2563EB;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+
+/* ---------- Media controls ---------- */
+
+#recordButton,
+#playMediaButton,
+#audioPlayButton {
+    background-color: #EFF6FF;
+    color: #2563EB;
+    border: 1px solid #93C5FD;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#recordButton:hover,
+#playMediaButton:hover,
+#audioPlayButton:hover {
+    background-color: #DBEAFE;
+}
+
+#recordButton:pressed,
+#playMediaButton:pressed,
+#audioPlayButton:pressed {
+    background-color: #BFDBFE;
+}
+
+#recordButton[locked="true"],
+#playMediaButton:disabled,
+#audioPlayButton:disabled {
+    background-color: #F1F5F9;
+    color: #94A3B8;
+    border: 1px solid #E2E8F0;
+}
+
+
+/* ---------- Bottom actions ---------- */
+
+#checkInActionCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 14px;
+}
+
+#checkInInformation {
+    color: #64748B;
+    font-size: 11px;
+}
+
+#captureStatus {
+    background-color: #FEE2E2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    padding: 6px 9px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+#uploadCheckInButton {
+    background-color: #FFFFFF;
+    color: #2563EB;
+    border: 1px solid #93C5FD;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#uploadCheckInButton:hover {
+    background-color: #EFF6FF;
+}
+
+#deleteCheckInButton {
+    background-color: #FFFFFF;
+    color: #DC2626;
+    border: 1px solid #FCA5A5;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#deleteCheckInButton:hover {
+    background-color: #FEF2F2;
+}
+
+#submitCheckInButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+#submitCheckInButton:hover {
+    background-color: #1D4ED8;
+}
+
+#submitCheckInButton:pressed {
+    background-color: #1E40AF;
+}
+
+#submitCheckInButton:disabled {
+    background-color: #94A3B8;
+    color: #E2E8F0;
+}
+
+
+/* ---------- Upload dialog ---------- */
+
+#uploadCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 20px;
+}
+
+#uploadTitle {
+    color: #0F172A;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#uploadNote {
+    color: #64748B;
+    font-size: 12px;
+}
+
+#uploadFileLabel {
+    background-color: #F8FAFC;
+    color: #64748B;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+}
+
+#uploadTypeCombo {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 2px solid #CBD5E1;
+    border-radius: 11px;
+    padding-left: 14px;
+    padding-right: 38px;
+    font-size: 13px;
+    min-width: 220px;
+}
+
+#uploadTypeCombo:hover {
+    border: 2px solid #93C5FD;
+}
+
+#uploadTypeCombo:focus {
+    border: 2px solid #2563EB;
+}
+
+#uploadTypeCombo::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 36px;
+    background-color: #EFF6FF;
+    border-left: 1px solid #D7E1EC;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+#uploadTypeCombo QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+    selection-background-color: #DBEAFE;
+    selection-color: #1E3A8A;
+    outline: none;
+    padding: 6px;
+}
+
+#uploadChooseButton {
+    background-color: #FFFFFF;
+    color: #2563EB;
+    border: 2px solid #2563EB;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+#uploadChooseButton:hover {
+    background-color: #EFF6FF;
+}
+
+
+/* ---------- Processing ---------- */
+
+#processingCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 24px;
+    min-width: 460px;
+    max-width: 460px;
+}
+
+#processingTitle {
+    color: #0F172A;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#processingMessage {
+    color: #2563EB;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#processingNote {
+    color: #64748B;
+    font-size: 12px;
+}
+
+
+/* ---------- Result ---------- */
+
+#resultPhrase {
+    color: #172554;
+    font-size: 30px;
+    font-weight: bold;
+}
+
+#resultExplanation {
+    color: #475569;
+    font-size: 14px;
+}
+
+#resultReminder {
+    background-color: #EFF6FF;
+    color: #475569;
+    border: 1px solid #DBEAFE;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 11px;
+}
+
+#scoreLabel,
+#trendLabel {
+    color: #475569;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#scoreNumber {
+    color: #2563EB;
+    font-size: 48px;
+    font-weight: bold;
+}
+
+#trendRequirement {
+    background-color: #F8FAFC;
+    color: #64748B;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 11px;
+}
+
+#recommendationText {
+    background-color: #F8FAFC;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 12px;
+}
+
+#wellbeingProgress {
+    background-color: #E2E8F0;
+    color: #0F172A;
+    border: none;
+    border-radius: 8px;
+    min-height: 20px;
+    max-height: 20px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+#wellbeingProgress::chunk {
+    background-color: #94A3B8;
+    border-radius: 8px;
+}
+
+#wellbeingProgress[zone="high"]::chunk {
+    background-color: #22C55E;
+}
+
+#wellbeingProgress[zone="mid"]::chunk {
+    background-color: #F59E0B;
+}
+
+#wellbeingProgress[zone="low"]::chunk {
+    background-color: #EF4444;
+}
+
+#recommendationItems {
+    background-color: transparent;
+}
+
+#recommendationItem {
+    background-color: #F8FAFC;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    border-left: 4px solid #2563EB;
+    border-radius: 11px;
+    padding: 10px 14px;
+    font-size: 13px;
+}
+
+/* =========================================
+   TRENDS PAGE
+   ========================================= */
+
+#trendsPageContent {
+    background-color: #F8FAFC;
+}
+
+#trendsHeaderName {
+    color: #64748B;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#trendsPageTitle {
+    color: #0F172A;
+    font-size: 25px;
+    font-weight: bold;
+}
+
+#trendsPageSubtitle {
+    color: #64748B;
+    font-size: 13px;
+}
+
+#trendsCalendarCard,
+#historyPanel {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 18px;
+}
+
+#trendsCardTitle {
+    color: #0F172A;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+#trendsCardNote,
+#calendarLegendText {
+    color: #64748B;
+    font-size: 11px;
+}
+
+#calendarLegendDot {
+    color: #2563EB;
+    font-size: 12px;
+}
+
+#wellbeingCalendar {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: none;
+    font-size: 12px;
+    selection-background-color: #2563EB;
+    selection-color: #FFFFFF;
+}
+
+#wellbeingCalendar QToolButton {
+    background-color: transparent;
+    color: #0F172A;
+    border: none;
+    border-radius: 8px;
+    padding: 7px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#wellbeingCalendar QToolButton:hover {
+    background-color: #EFF6FF;
+    color: #2563EB;
+}
+
+#wellbeingCalendar QMenu {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #DCE5F0;
+}
+
+#wellbeingCalendar QSpinBox {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+    border-radius: 7px;
+    padding: 4px;
+}
+
+#wellbeingCalendar QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    selection-background-color: #2563EB;
+    selection-color: #FFFFFF;
+    outline: none;
+}
+
+#historyEmptyState,
+#historySummaryState,
+#historyScrollContent {
+    background-color: #FFFFFF;
+}
+
+#historyScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+#historyEmptyTitle {
+    color: #0F172A;
+    font-size: 21px;
+    font-weight: bold;
+}
+
+#historyEmptyMessage {
+    color: #64748B;
+    font-size: 13px;
+}
+
+#historySelectedDate {
+    color: #0F172A;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#historySelectedTime {
+    color: #64748B;
+    font-size: 11px;
+}
+
+#historySummaryCard,
+#historyDetailsCard {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 15px;
+}
+
+#historyPhrase {
+    color: #172554;
+    font-size: 23px;
+    font-weight: bold;
+}
+
+#historyExplanation {
+    color: #475569;
+    font-size: 13px;
+}
+
+#historyInputType {
+    color: #64748B;
+    font-size: 11px;
+}
+
+#historyScoreItem {
+    background-color: #FFFFFF;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 11px;
+}
+
+#historyTranscript {
+    background-color: #FFFFFF;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 12px;
+}
+
+#historyTranscript:focus {
+    border: 1px solid #E2E8F0;
+}
+
+#historyRecommendationContainer {
+    background-color: transparent;
+}
+
+#historyRecommendationItem {
+    background-color: #FFFFFF;
+    color: #334155;
+    border: 1px solid #E2E8F0;
+    border-left: 4px solid #2563EB;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 12px;
+}
+
+#trendHistoryProgress {
+    background-color: #E2E8F0;
+    color: #0F172A;
+    border: none;
+    border-radius: 8px;
+    min-height: 20px;
+    max-height: 20px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+#trendHistoryProgress::chunk {
+    background-color: #94A3B8;
+    border-radius: 8px;
+}
+
+#trendHistoryProgress[zone="high"]::chunk {
+    background-color: #22C55E;
+}
+
+#trendHistoryProgress[zone="mid"]::chunk {
+    background-color: #F59E0B;
+}
+
+#trendHistoryProgress[zone="low"]::chunk {
+    background-color: #EF4444;
+}
+
+#inputUsedLabel {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#trendsGraphCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 18px;
+}
