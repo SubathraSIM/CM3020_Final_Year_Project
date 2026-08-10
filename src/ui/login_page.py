@@ -1,10 +1,10 @@
 import math
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, Qt, QTimer
+from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QWidget,
 )
 
@@ -146,10 +146,26 @@ class BrandPanel(QFrame):
 
 
 class LoginPage(QWidget):
+    language_changed = Signal(str)
+
     def __init__(self):
         super().__init__()
 
         self.current_language = "English"
+
+        # Compact language selector available before login.
+        self.language_combo = QComboBox()
+        self.language_combo.setObjectName("loginLanguageCombo")
+        self.language_combo.setFixedHeight(36)
+        self.language_combo.setCursor(Qt.PointingHandCursor)
+        self.language_combo.setToolTip("Language")
+        self.language_combo.addItem("English", "English")
+        self.language_combo.addItem("Bahasa Melayu", "Malay")
+        self.language_combo.addItem("简体中文", "Chinese")
+        self.language_combo.addItem("தமிழ்", "Tamil")
+        self.language_combo.currentIndexChanged.connect(
+            self.language_selected
+        )
 
         card = QFrame()
         card.setObjectName("appCard")
@@ -170,11 +186,17 @@ class LoginPage(QWidget):
         row.addWidget(card)
         row.addStretch()
 
+        language_row = QHBoxLayout()
+        language_row.setContentsMargins(0, 0, 0, 0)
+        language_row.addStretch()
+        language_row.addWidget(self.language_combo)
+
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 50, 60, 60)
+        layout.setContentsMargins(60, 50, 60, 30)
         layout.addStretch()
         layout.addLayout(row)
         layout.addStretch()
+        layout.addLayout(language_row)
 
         self.set_language("English")
 
@@ -264,6 +286,25 @@ class LoginPage(QWidget):
 
         return panel
 
+    def language_selected(self):
+        language = self.language_combo.currentData()
+
+        if not language:
+            return
+
+        self.clear_status()
+        self.set_language(language)
+        self.language_changed.emit(language)
+
+    def resize_language_combo(self):
+        # Keep the selector pill compact while allowing longer language names.
+        text_width = self.language_combo.fontMetrics().horizontalAdvance(
+            self.language_combo.currentText()
+        )
+        self.language_combo.setFixedWidth(
+            max(100, min(165, text_width + 50))
+        )
+
     def t(self, key):
         return get_text(self.current_language, key)
 
@@ -281,6 +322,12 @@ class LoginPage(QWidget):
         self.register_button.setText(self.t("create_account"))
         self.divider_label.setText(self.t("new_here"))
 
+        index = self.language_combo.findData(language)
+        if index >= 0:
+            self.language_combo.blockSignals(True)
+            self.language_combo.setCurrentIndex(index)
+            self.language_combo.blockSignals(False)
+
         tamil = language == "Tamil"
 
         widgets = [
@@ -293,10 +340,13 @@ class LoginPage(QWidget):
             (self.login_button, 10),
             (self.register_button, 10),
             (self.divider_label, 9),
+            (self.language_combo, 10),
         ]
 
         for widget, size in widgets:
             widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+
+        self.resize_language_combo()
 
     def show_status(self, message, status_type):
         icon = "✓" if status_type == "success" else "!"

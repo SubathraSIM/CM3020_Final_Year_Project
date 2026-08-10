@@ -1,5 +1,6 @@
 import hashlib, hmac, os, sqlite3
 from pathlib import Path
+from contextlib import contextmanager
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -10,11 +11,22 @@ SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 PBKDF2_ITERATIONS = 100000
 
 
+@contextmanager
 def connect():
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+
+    try:
+        yield connection
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
 
 
 def add_columns(connection, table, columns):

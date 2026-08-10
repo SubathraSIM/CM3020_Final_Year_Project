@@ -21,6 +21,7 @@ LOCALES = {
 }
 
 HOME_TEXT = {
+    "assistant": "Assistant",
     "home_eyebrow": "PRIVATE WELLBEING CHECK-IN",
     "home_description": "Take a short check-in to reflect on how you are feeling today.",
 
@@ -53,6 +54,7 @@ class HoverSidebar(QFrame):
     home_requested = Signal()
     check_in_requested = Signal()
     trends_requested = Signal()
+    assistant_requested = Signal()
     settings_requested = Signal()
     logout_requested = Signal()
 
@@ -72,12 +74,14 @@ class HoverSidebar(QFrame):
         self.home_button = self.make_button("home_icon.png", "home", True)
         self.check_in_button = self.make_button("check_in_icon.png", "check_in")
         self.trends_button = self.make_button("trends_icon.png", "trends")
+        self.assistant_button = self.make_button("white_heart.png", "assistant")
         self.settings_button = self.make_button("settings_icon.png", "settings")
         self.logout_button = self.make_button("logout.png", "logout")
 
         self.home_button.clicked.connect(self.home_requested.emit)
         self.check_in_button.clicked.connect(self.check_in_requested.emit)
         self.trends_button.clicked.connect(self.trends_requested.emit)
+        self.assistant_button.clicked.connect(self.assistant_requested.emit)
         self.settings_button.clicked.connect(self.settings_requested.emit)
         self.logout_button.clicked.connect(self.logout_requested.emit)
 
@@ -87,6 +91,7 @@ class HoverSidebar(QFrame):
         layout.addWidget(self.home_button)
         layout.addWidget(self.check_in_button)
         layout.addWidget(self.trends_button)
+        layout.addWidget(self.assistant_button)
         layout.addStretch()
         layout.addWidget(self.settings_button)
         layout.addWidget(self.logout_button)
@@ -108,6 +113,7 @@ class HoverSidebar(QFrame):
             self.home_button,
             self.check_in_button,
             self.trends_button,
+            self.assistant_button,
             self.settings_button,
             self.logout_button,
         )
@@ -143,6 +149,7 @@ class HoverSidebar(QFrame):
 class HomePage(QWidget):
     check_in_requested = Signal()
     trends_requested = Signal()
+    assistant_requested = Signal()
     settings_requested = Signal()
     logout_requested = Signal()
 
@@ -156,6 +163,7 @@ class HomePage(QWidget):
         self.sidebar = HoverSidebar()
         self.sidebar.check_in_requested.connect(self.check_in_requested.emit)
         self.sidebar.trends_requested.connect(self.trends_requested.emit)
+        self.sidebar.assistant_requested.connect(self.assistant_requested.emit)
         self.sidebar.settings_requested.connect(self.settings_requested.emit)
         self.sidebar.logout_requested.connect(self.logout_requested.emit)
 

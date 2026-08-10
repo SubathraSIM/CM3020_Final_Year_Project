@@ -66,10 +66,10 @@ def heart_image(size):
 
 
 class ConsentDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, initial_language="English"):
         super().__init__(parent)
 
-        self.selected_language = "English"
+        self.selected_language = initial_language
 
         self.setModal(True)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
@@ -79,6 +79,10 @@ class ConsentDialog(QDialog):
         self.stack = QStackedWidget()
         self.stack.addWidget(self.build_language_page())
         self.stack.addWidget(self.build_consent_page())
+
+        index = self.language_combo.findData(initial_language)
+        if index >= 0:
+            self.language_combo.setCurrentIndex(index)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)

@@ -130,6 +130,43 @@ QLineEdit:focus {
     font-size: 12px;
 }
 
+/* Compact pre-login language selector */
+#loginLanguageCombo {
+    background-color: #EAF2FF;
+    color: #2563EB;
+    border: 1px solid #BFDBFE;
+    border-radius: 9px;
+    padding: 6px 28px 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#loginLanguageCombo:hover {
+    background-color: #DBEAFE;
+    border: 1px solid #93C5FD;
+}
+
+#loginLanguageCombo:focus {
+    background-color: #DBEAFE;
+    border: 1px solid #60A5FA;
+}
+
+#loginLanguageCombo::drop-down {
+    width: 24px;
+    border: none;
+}
+
+#loginLanguageCombo QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    selection-background-color: #DBEAFE;
+    selection-color: #1D4ED8;
+    outline: none;
+    padding: 4px;
+}
+
 
 /* =========================================
    STATUS MESSAGES
@@ -1100,4 +1137,283 @@ QCheckBox::indicator:checked {
     background-color: #FFFFFF;
     border: 1px solid #DCE5F0;
     border-radius: 18px;
+}
+
+/* =========================================
+   SOLACE ASSISTANT
+   ========================================= */
+
+#assistantContent {
+    background-color: #F8FAFC;
+}
+
+
+/* ---------- Hero ---------- */
+
+#assistantTitle {
+    background-color: transparent;
+    color: #FFFFFF;
+    font-size: 27px;
+    font-weight: bold;
+}
+
+#assistantSubtitle {
+    background-color: transparent;
+    color: #D7E3F4;
+    font-size: 13px;
+}
+
+#assistantPrivateNote {
+    background-color: transparent;
+    color: #93C5FD;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+
+/* ---------- Clear chat ---------- */
+
+#assistantClearButton {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border: 1px solid #475569;
+    border-radius: 11px;
+    padding: 7px 15px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#assistantClearButton:hover {
+    background-color: #334155;
+    border: 1px solid #60A5FA;
+}
+
+#assistantClearButton:pressed {
+    background-color: #0F172A;
+}
+
+#assistantClearButton:disabled {
+    background-color: #334155;
+    color: #94A3B8;
+    border: 1px solid #475569;
+}
+
+
+/* ---------- Chat canvas ---------- */
+
+#assistantChatScroll {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 20px;
+}
+
+#assistantChatContainer {
+    background-color: #FFFFFF;
+}
+
+#assistantMessageRow {
+    background-color: transparent;
+}
+
+
+/* ---------- User message ---------- */
+
+#assistantUserMessage {
+    background-color: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: 17px;
+}
+
+#assistantUserMessageText {
+    background-color: transparent;
+    color: #FFFFFF;
+    font-size: 12px;
+}
+
+
+/* ---------- Solace message ---------- */
+
+#assistantBotMessage {
+    background-color: #F8FAFC;
+    border: 1px solid #DCE5F0;
+    border-radius: 17px;
+}
+
+#assistantBotMessageText {
+    background-color: transparent;
+    color: #1E293B;
+    font-size: 12px;
+}
+
+
+/* ---------- In-chat thinking indicator ---------- */
+
+#assistantThinkingMessage {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 17px;
+}
+
+#assistantThinkingText {
+    background-color: transparent;
+    color: #94A3B8;
+    font-size: 11px;
+    font-style: italic;
+}
+
+
+/* ---------- Agent tool information ---------- */
+
+#assistantToolLabel {
+    background-color: #EEF4FF;
+    color: #64748B;
+    border: 1px solid #DBEAFE;
+    border-radius: 8px;
+    padding: 4px 7px;
+    font-size: 9px;
+    font-weight: bold;
+}
+
+
+/* ---------- Suggested questions ---------- */
+
+#assistantSuggestionsTitle {
+    color: #334155;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#assistantSuggestionButton {
+    background-color: #FFFFFF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    border-radius: 13px;
+    padding: 9px 11px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#assistantSuggestionButton:hover {
+    background-color: #EFF6FF;
+    color: #1E40AF;
+    border: 1px solid #60A5FA;
+}
+
+#assistantSuggestionButton:pressed {
+    background-color: #DBEAFE;
+}
+
+#assistantSuggestionButton:disabled {
+    background-color: #F8FAFC;
+    color: #94A3B8;
+    border: 1px solid #E2E8F0;
+}
+
+
+/* ---------- Composer ---------- */
+
+#assistantComposer {
+    background-color: #FFFFFF;
+    border: 1px solid #DCE5F0;
+    border-radius: 18px;
+}
+
+#assistantQuestionInput {
+    background-color: #F8FAFC;
+    color: #0F172A;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 9px 13px;
+    font-size: 12px;
+}
+
+#assistantQuestionInput:hover {
+    border: 1px solid #BFDBFE;
+}
+
+#assistantQuestionInput:focus {
+    background-color: #FFFFFF;
+    border: 2px solid #2563EB;
+}
+
+#assistantQuestionInput:disabled {
+    background-color: #F1F5F9;
+    color: #94A3B8;
+}
+
+
+/* ---------- Send button ---------- */
+
+#assistantSendButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#assistantSendButton:hover {
+    background-color: #1D4ED8;
+}
+
+#assistantSendButton:pressed {
+    background-color: #1E40AF;
+}
+
+#assistantSendButton:disabled {
+    background-color: #94A3B8;
+    color: #E2E8F0;
+}
+
+
+/* ---------- Processing status ---------- */
+
+#assistantStatus {
+    background-color: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    border-radius: 9px;
+    padding: 5px 9px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+
+/* ---------- Disclaimer ---------- */
+
+#assistantDisclaimer {
+    background-color: transparent;
+    color: #94A3B8;
+    font-size: 10px;
+}
+
+
+/* ---------- Scrollbar ---------- */
+
+#assistantChatScroll QScrollBar:vertical {
+    background-color: transparent;
+    width: 9px;
+    margin: 10px 3px 10px 0;
+}
+
+#assistantChatScroll QScrollBar::handle:vertical {
+    background-color: #CBD5E1;
+    border-radius: 4px;
+    min-height: 32px;
+}
+
+#assistantChatScroll QScrollBar::handle:vertical:hover {
+    background-color: #94A3B8;
+}
+
+#assistantChatScroll QScrollBar::add-line:vertical,
+#assistantChatScroll QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+#assistantChatScroll QScrollBar::add-page:vertical,
+#assistantChatScroll QScrollBar::sub-page:vertical {
+    background-color: transparent;
 }
