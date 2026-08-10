@@ -159,10 +159,11 @@ class LoginPage(QWidget):
         self.language_combo.setFixedHeight(36)
         self.language_combo.setCursor(Qt.PointingHandCursor)
         self.language_combo.setToolTip("Language")
+        self.language_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.language_combo.addItem("English", "English")
-        self.language_combo.addItem("Bahasa Melayu", "Malay")
-        self.language_combo.addItem("简体中文", "Chinese")
-        self.language_combo.addItem("தமிழ்", "Tamil")
+        self.language_combo.addItem("Malay", "Malay")
+        self.language_combo.addItem("Chinese", "Chinese")
+        self.language_combo.addItem("Tamil", "Tamil")
         self.language_combo.currentIndexChanged.connect(
             self.language_selected
         )
@@ -302,7 +303,7 @@ class LoginPage(QWidget):
             self.language_combo.currentText()
         )
         self.language_combo.setFixedWidth(
-            max(100, min(165, text_width + 50))
+            max(100, min(170, text_width + 50))
         )
 
     def t(self, key):
