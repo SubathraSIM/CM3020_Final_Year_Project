@@ -20,3 +20,6 @@ Thumbs.db
 data/raw/
 data/processed/
 outputs/
+
+# Local user data
+data/database/

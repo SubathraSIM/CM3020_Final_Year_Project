@@ -30,12 +30,6 @@ QLabel {
     border-bottom-left-radius: 24px;
 }
 
-#heartMark {
-    color: #F43F5E;
-    font-size: 92px;
-    font-weight: bold;
-}
-
 #brandName {
     color: #FFFFFF;
     font-size: 40px;
@@ -165,10 +159,6 @@ QLineEdit:focus {
    HOME PAGE
    ========================================= */
 
-#homeWrapper {
-    background-color: #EEF3FB;
-}
-
 #homeContent {
     background-color: #F8FAFC;
 }
@@ -179,12 +169,6 @@ QLineEdit:focus {
 #sideBar {
     background-color: #05080B;
     border: none;
-}
-
-#sideBrand {
-    color: #F43F5E;
-    font-size: 24px;
-    font-weight: bold;
 }
 
 #navButton {
@@ -224,12 +208,6 @@ QLineEdit:focus {
 #homeBrand {
     color: #0F172A;
     font-size: 23px;
-    font-weight: bold;
-}
-
-#homeHeart {
-    color: #F43F5E;
-    font-size: 27px;
     font-weight: bold;
 }
 
@@ -287,24 +265,6 @@ QLineEdit:focus {
     font-size: 11px;
 }
 
-#heroVisualCircle {
-    background-color: #1E3A8A;
-    border: 2px solid #60A5FA;
-    border-radius: 75px;
-}
-
-#heroVisualHeart {
-    color: #F43F5E;
-    font-size: 58px;
-    font-weight: bold;
-}
-
-#heroVisualText {
-    color: #BFDBFE;
-    font-size: 11px;
-    font-weight: bold;
-}
-
 
 /* ---------- Feature cards ---------- */
 
@@ -325,16 +285,6 @@ QLineEdit:focus {
     border: 1px solid #93C5FD;
 }
 
-#featureIcon {
-    background-color: #EFF6FF;
-    color: #2563EB;
-    border: 1px solid #DBEAFE;
-    border-radius: 12px;
-    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI";
-    font-size: 20px;
-    font-weight: bold;
-}
-
 #featureTitle {
     color: #0F172A;
     font-size: 15px;
@@ -346,26 +296,42 @@ QLineEdit:focus {
     font-size: 12px;
 }
 
-
-/* ---------- Floating help button ---------- */
-
-#floatingHelpButton {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border: 4px solid #FFFFFF;
-    border-radius: 29px;
-    font-size: 23px;
+#homeTime {
+    color: #0F172A;
+    font-size: 36px;
     font-weight: bold;
 }
 
-#floatingHelpButton:hover {
-    background-color: #1D4ED8;
+#QComboBox {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 2px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 13px;
 }
 
-#floatingHelpButton:pressed {
-    background-color: #1E40AF;
+#QComboBox:hover {
+    border: 2px solid #93C5FD;
 }
 
+#QComboBox:focus {
+    border: 2px solid #2563EB;
+}
+
+#QComboBox::drop-down {
+    width: 30px;
+    border: none;
+}
+
+#QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+    selection-background-color: #DBEAFE;
+    selection-color: #1E3A8A;
+    outline: none;
+}
 
 /* =========================================
    CONSENT DIALOG
@@ -379,12 +345,6 @@ QDialog {
     background-color: #FFFFFF;
     border: 1px solid #DCE5F0;
     border-radius: 24px;
-}
-
-#consentHeart {
-    color: #F43F5E;
-    font-size: 42px;
-    font-weight: bold;
 }
 
 #consentTitle {
@@ -440,12 +400,6 @@ QCheckBox::indicator:checked {
     border-radius: 24px;
 }
 
-#thankYouHeart {
-    color: #F43F5E;
-    font-size: 42px;
-    font-weight: bold;
-}
-
 #thankYouTitle {
     color: #0F172A;
     font-size: 22px;
@@ -499,11 +453,15 @@ QCheckBox::indicator:checked {
     border-radius: 18px;
 }
 
-#videoPreviewStack,
+#videoPreviewStack {
+    background-color: #0F172A;
+    border: 1px solid #CBD5E1;
+}
+
 #videoPlaceholder,
 #videoWidget {
     background-color: #0F172A;
-    border: 1px solid #334155;
+    border: none;
 }
 
 #videoPreviewText {
@@ -803,6 +761,11 @@ QCheckBox::indicator:checked {
     font-weight: bold;
 }
 
+#scoreCaveat {
+    color: #64748B;
+    font-size: 11px;
+}
+
 #scoreNumber {
     color: #2563EB;
     font-size: 48px;
@@ -912,6 +875,47 @@ QCheckBox::indicator:checked {
 #calendarLegendText {
     color: #64748B;
     font-size: 11px;
+}
+
+#calNavBar {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+}
+
+#calNavArrow {
+    background-color: transparent;
+    color: #2563EB;
+    border: none;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#calNavArrow:hover {
+    background-color: #DBEAFE;
+}
+
+#calNavArrow:pressed {
+    background-color: #BFDBFE;
+}
+
+#calNavCombo {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#calNavCombo:hover {
+    border: 1px solid #93C5FD;
+}
+
+#calNavCombo:focus {
+    border: 1px solid #2563EB;
 }
 
 #calendarLegendDot {

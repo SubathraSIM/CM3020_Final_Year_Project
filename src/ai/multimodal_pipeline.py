@@ -1,732 +1,1235 @@
 from __future__ import annotations
 
-import gc
-import re
-import subprocess
-import tempfile
+import gc, math, re, subprocess, tempfile
 from pathlib import Path
 from statistics import mean
 
 import cv2
 import imageio_ffmpeg
 import librosa
+import mediapipe as mp
 import torch
+
+from nltk.tokenize import wordpunct_tokenize
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import pipeline as hf_pipeline
+from transformers import (
+    AutoModelForAudioClassification,
+    AutoProcessor,
+    pipeline as hf_pipeline,
+)
+
+from src.ui.translations import translate_text
+
 
 TEXT_MODEL_ID = "j-hartmann/emotion-english-roberta-large"
-AUDIO_MODEL_ID = "forwarder1121/ast-finetuned-model"
-VISION_MODEL_ID = "trpakov/vit-face-expression"
+AUDIO_MODEL_ID = "MERaLiON/MERaLiON-SER-v1"
+VISION_MODEL_ID = "mo-thecreator/vit-Facial-Expression-Recognition"
 WHISPER_MODEL_ID = "openai/whisper-small"
 RECOMMENDATION_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 
-NEGATIVE_LABELS = {
-    "anger",
-    "fear",
-    "sad",
-    "sadness",
-    "disgust",
+WHISPER_LANGUAGES = {
+    "English": "en",
+    "Malay": "ms",
+    "Chinese": "zh",
+    "Tamil": "ta",
+}
+
+NEGATIVE_LABELS = {"anger", "fear", "sadness", "disgust"}
+
+MERALION_LABELS = [
+    "Neutral", "Happy", "Sad", "Angry",
+    "Fearful", "Disgusted", "Surprised",
+]
+
+LABEL_ALIASES = {
+    "angry": "anger", "anger": "anger",
+    "fearful": "fear", "fear": "fear",
+    "sad": "sadness", "sadness": "sadness",
+    "disgusted": "disgust", "disgust": "disgust",
+    "happy": "happy", "happiness": "happy", "joy": "happy",
+    "neutral": "neutral",
+    "surprised": "surprise", "surprise": "surprise",
+
+    "label_0": "anger",
+    "label_1": "disgust",
+    "label_2": "fear",
+    "label_3": "happy",
+    "label_4": "sadness",
+    "label_5": "surprise",
+    "label_6": "neutral",
+}
+
+SPEECH_RANGES = {
+    "English": (100, 190),
+    "Malay": (100, 190),
+    "Chinese": (180, 320),
+    "Tamil": (90, 180),
+}
+
+FILLERS = {
+    "English": {"um", "uh", "erm", "hmm"},
+    "Malay": {"erm", "hmm", "anu", "macam"},
+    "Chinese": {"嗯", "呃", "那个"},
+    "Tamil": {"அம்", "ஊம்", "அதாவது"},
 }
 
 VIDEO_FRAME_COUNT = 8
+AUXILIARY_WEIGHT = 0.02
 
 
-def canonical_label(value: object) -> str:
-    label = re.sub(r"[^a-z]+", "", str(value).strip().lower())
-
-    aliases = {
-        "ang": "anger",
-        "angry": "anger",
-        "anger": "anger",
-        "fea": "fear",
-        "fearful": "fear",
-        "fear": "fear",
-        "sad": "sad",
-        "sadness": "sadness",
-        "hap": "happy",
-        "happy": "happy",
-        "joy": "happy",
-        "neu": "neutral",
-        "neutral": "neutral",
-        "sur": "surprise",
-        "surprised": "surprise",
-        "surprise": "surprise",
-        "dis": "disgust",
-        "disgusted": "disgust",
-        "disgust": "disgust",
-        "calm": "calm",
-        "contempt": "contempt",
-    }
-
-    return aliases.get(label, label)
+def clamp(value):
+    return max(0.0, min(1.0, float(value)))
 
 
-def normalise_predictions(raw_output: object) -> list[dict]:
-    output = raw_output
-
-    if isinstance(output, dict):
-        output = [output]
-
-    if (
-        isinstance(output, list)
-        and output
-        and isinstance(output[0], list)
-    ):
-        output = output[0]
-
-    predictions = []
-
-    if isinstance(output, list):
-        for item in output:
-            if not isinstance(item, dict):
-                continue
-
-            if "label" not in item or "score" not in item:
-                continue
-
-            predictions.append(
-                {
-                    "label": str(item["label"]),
-                    "score": float(item["score"]),
-                }
-            )
-
-    return predictions
+def label_name(name):
+    name = str(name).lower().strip()
+    return LABEL_ALIASES.get(name, name)
 
 
-def negative_probability(predictions: list[dict]) -> float:
-    probability = sum(
-        item["score"]
-        for item in predictions
-        if canonical_label(item["label"]) in NEGATIVE_LABELS
-    )
+def predictions(output):
+    return output[0] if output and isinstance(output[0], list) else output
 
-    return max(0.0, min(1.0, probability))
+
+def negative_score(output):
+    return clamp(sum(
+        float(item["score"])
+        for item in predictions(output)
+        if label_name(item["label"]) in NEGATIVE_LABELS
+    ))
 
 
 class MultimodalPipeline:
     def __init__(self):
         self.device = 0 if torch.cuda.is_available() else -1
 
-        self._whisper = None
-        self._text_classifier = None
-        self._audio_classifier = None
-        self._vision_classifier = None
-        self._recommendation_tokenizer = None
-        self._recommendation_model = None
+        self.whisper = None
+        self.text_model = None
+        self.audio_processor = None
+        self.audio_model = None
+        self.vision_model = None
+        self.qwen = None
 
-    def _load_whisper(self):
-        if self._whisper is None:
-            self._whisper = hf_pipeline(
+    # --------------------------------------------------
+    # Model loading
+    # --------------------------------------------------
+
+    def load_whisper(self):
+        if self.whisper is None:
+            self.whisper = hf_pipeline(
                 "automatic-speech-recognition",
                 model=WHISPER_MODEL_ID,
                 device=self.device,
                 chunk_length_s=30,
             )
+        return self.whisper
 
-        return self._whisper
-
-    def _load_text_classifier(self):
-        if self._text_classifier is None:
-            self._text_classifier = hf_pipeline(
+    def load_text_model(self):
+        if self.text_model is None:
+            self.text_model = hf_pipeline(
                 "text-classification",
                 model=TEXT_MODEL_ID,
                 device=self.device,
                 top_k=None,
             )
+        return self.text_model
 
-        return self._text_classifier
-
-    def _load_audio_classifier(self):
-        if self._audio_classifier is None:
-            self._audio_classifier = hf_pipeline(
-                "audio-classification",
-                model=AUDIO_MODEL_ID,
-                device=self.device,
-                top_k=None,
-                trust_remote_code=True,
+    def load_audio_model(self):
+        if self.audio_model is None:
+            self.audio_processor = AutoProcessor.from_pretrained(
+                AUDIO_MODEL_ID
             )
 
-        return self._audio_classifier
+            self.audio_model = (
+                AutoModelForAudioClassification.from_pretrained(
+                    AUDIO_MODEL_ID,
+                    trust_remote_code=True,
+                )
+            )
 
-    def _load_vision_classifier(self):
-        if self._vision_classifier is None:
-            self._vision_classifier = hf_pipeline(
+            if torch.cuda.is_available():
+                self.audio_model.to("cuda")
+
+            self.audio_model.eval()
+
+        return self.audio_processor, self.audio_model
+
+    def load_vision_model(self):
+        if self.vision_model is None:
+            self.vision_model = hf_pipeline(
                 "image-classification",
                 model=VISION_MODEL_ID,
                 device=self.device,
                 top_k=None,
             )
+        return self.vision_model
 
-        return self._vision_classifier
-
-    def _load_recommendation_model(self):
-        if self._recommendation_model is None:
-            self._recommendation_tokenizer = AutoTokenizer.from_pretrained(
-                RECOMMENDATION_MODEL_ID
+    def load_qwen(self):
+        if self.qwen is None:
+            self.qwen = hf_pipeline(
+                "text-generation",
+                model=RECOMMENDATION_MODEL_ID,
+                device_map="auto",
+                dtype="auto",
             )
+        return self.qwen
 
-            self._recommendation_model = (
-                AutoModelForCausalLM.from_pretrained(
-                    RECOMMENDATION_MODEL_ID,
-                    torch_dtype="auto",
-                    low_cpu_mem_usage=True,
-                )
-            )
+    # --------------------------------------------------
+    # Whisper
+    # --------------------------------------------------
 
-            if torch.cuda.is_available():
-                self._recommendation_model.to("cuda")
-
-        return (
-            self._recommendation_tokenizer,
-            self._recommendation_model,
-        )
-
-    def transcribe(self, audio_path: str) -> str:
-        recogniser = self._load_whisper()
-
-        waveform, _ = librosa.load(
+    def whisper_text(self, audio_path, language_name, task):
+        audio, _ = librosa.load(
             audio_path,
             sr=16000,
             mono=True,
         )
 
-        output = recogniser(
+        result = self.load_whisper()(
             {
-                "array": waveform,
+                "array": audio,
                 "sampling_rate": 16000,
-            }
+            },
+            return_timestamps=True,
+            generate_kwargs={
+                "language":
+                    WHISPER_LANGUAGES[language_name],
+                "task": task,
+            },
         )
 
-        if isinstance(output, dict):
-            return str(output.get("text", "")).strip()
+        return result["text"].strip()
 
-        return str(output).strip()
+    def transcribe(self, audio_path, language_name):
+        return self.whisper_text(
+            audio_path,
+            language_name,
+            "transcribe",
+        )
 
-    def text_score(self, transcript: str) -> float:
-        classifier = self._load_text_classifier()
+    def translate_to_english(self, audio_path, language_name):
+        if language_name == "English":
+            return self.transcribe(
+                audio_path,
+                language_name,
+            )
 
-        raw_output = classifier(
-            transcript,
+        return self.whisper_text(
+            audio_path,
+            language_name,
+            "translate",
+        )
+
+    # --------------------------------------------------
+    # Primary model 1 - RoBERTa text emotion
+    # --------------------------------------------------
+
+    def text_score(self, text):
+        output = self.load_text_model()(
+            text,
             truncation=True,
             max_length=512,
             top_k=None,
         )
 
-        return negative_probability(
-            normalise_predictions(raw_output)
-        )
+        return negative_score(output)
 
-    def audio_score(self, audio_path: str) -> float:
-        classifier = self._load_audio_classifier()
+    # --------------------------------------------------
+    # Primary model 2 - MERaLiON speech emotion
+    # --------------------------------------------------
 
-        extractor = getattr(
-            classifier,
-            "feature_extractor",
-            None,
-        )
+    def audio_score(self, audio_path):
+        processor, model = self.load_audio_model()
 
-        sampling_rate = int(
-            getattr(extractor, "sampling_rate", 16000)
-        )
-
-        waveform, _ = librosa.load(
+        audio, _ = librosa.load(
             audio_path,
-            sr=sampling_rate,
+            sr=16000,
             mono=True,
         )
 
-        raw_output = classifier(
+        inputs = processor(
+            audio,
+            sampling_rate=16000,
+            return_tensors="pt",
+            return_attention_mask=True,
+        )
+
+        device = next(model.parameters()).device
+
+        inputs = {
+            key: value.to(device)
+            for key, value in inputs.items()
+            if key in {
+                "input_features",
+                "attention_mask",
+            }
+        }
+
+        with torch.inference_mode():
+            logits = model(**inputs)["logits"]
+
+        probabilities = (
+            torch.softmax(logits, dim=-1)[0]
+            .detach()
+            .cpu()
+            .tolist()
+        )
+
+        output = [
             {
-                "array": waveform,
-                "sampling_rate": sampling_rate,
-            },
-            top_k=None,
-        )
+                "label": label,
+                "score": score,
+            }
+            for label, score
+            in zip(
+                MERALION_LABELS,
+                probabilities,
+            )
+        ]
 
-        return negative_probability(
-            normalise_predictions(raw_output)
-        )
+        return negative_score(output)
 
-    def vision_score(self, video_path: str) -> float:
-        classifier = self._load_vision_classifier()
+    # --------------------------------------------------
+    # Primary model 3 - ViT facial emotion
+    # --------------------------------------------------
 
-        frames = self._sample_face_frames(
-            video_path,
-            VIDEO_FRAME_COUNT,
-        )
+    def vision_score(self, video_path):
+        frames = self.sample_faces(video_path)
 
         if not frames:
             raise RuntimeError(
-                "No usable video frames were found for facial-expression analysis."
+                "No face detected in the video."
             )
 
-        scores = []
+        model = self.load_vision_model()
 
-        for frame in frames:
-            raw_output = classifier(
-                frame,
-                top_k=None,
+        return mean(
+            negative_score(
+                model(image, top_k=None)
             )
-
-            scores.append(
-                negative_probability(
-                    normalise_predictions(raw_output)
-                )
-            )
-
-        return float(mean(scores))
-
-    def _sample_face_frames(
-        self,
-        video_path: str,
-        frame_count: int,
-    ) -> list[Image.Image]:
-        capture = cv2.VideoCapture(video_path)
-
-        if not capture.isOpened():
-            raise RuntimeError(
-                "The selected video could not be opened."
-            )
-
-        total_frames = int(
-            capture.get(cv2.CAP_PROP_FRAME_COUNT)
+            for image in frames
         )
 
-        if total_frames <= 0:
-            capture.release()
-            return []
+    def sample_faces(self, video_path):
+        capture = cv2.VideoCapture(video_path)
 
-        face_detector = cv2.CascadeClassifier(
+        frame_count = int(
+            capture.get(
+                cv2.CAP_PROP_FRAME_COUNT
+            )
+        )
+
+        detector = cv2.CascadeClassifier(
             cv2.data.haarcascades
             + "haarcascade_frontalface_default.xml"
         )
 
-        positions = [
-            int(
-                index
-                * (total_frames - 1)
-                / max(1, frame_count - 1)
-            )
-            for index in range(frame_count)
-        ]
-
         images = []
 
-        for position in positions:
+        for index in range(
+            VIDEO_FRAME_COUNT
+        ):
+            position = int(
+                index
+                * max(frame_count - 1, 0)
+                / max(
+                    VIDEO_FRAME_COUNT - 1,
+                    1,
+                )
+            )
+
             capture.set(
                 cv2.CAP_PROP_POS_FRAMES,
                 position,
             )
 
-            success, frame = capture.read()
+            ok, frame = capture.read()
 
-            if not success:
+            if not ok:
                 continue
 
-            rgb_frame = cv2.cvtColor(
-                frame,
-                cv2.COLOR_BGR2RGB,
-            )
-
-            grey_frame = cv2.cvtColor(
+            grey = cv2.cvtColor(
                 frame,
                 cv2.COLOR_BGR2GRAY,
             )
 
-            faces = face_detector.detectMultiScale(
-                grey_frame,
+            faces = detector.detectMultiScale(
+                grey,
                 scaleFactor=1.1,
                 minNeighbors=5,
                 minSize=(60, 60),
             )
 
-            if len(faces):
-                x, y, width, height = max(
-                    faces,
-                    key=lambda item: item[2] * item[3],
-                )
+            if len(faces) == 0:
+                continue
 
-                margin = int(
-                    max(width, height) * 0.18
-                )
+            x, y, width, height = max(
+                faces,
+                key=lambda box:
+                    box[2] * box[3],
+            )
 
-                x1 = max(0, x - margin)
-                y1 = max(0, y - margin)
-                x2 = min(
-                    rgb_frame.shape[1],
-                    x + width + margin,
-                )
-                y2 = min(
-                    rgb_frame.shape[0],
-                    y + height + margin,
-                )
+            margin = int(
+                max(width, height) * 0.18
+            )
 
-                rgb_frame = rgb_frame[
-                    y1:y2,
-                    x1:x2,
-                ]
+            x1 = max(0, x - margin)
+            y1 = max(0, y - margin)
+
+            x2 = min(
+                frame.shape[1],
+                x + width + margin,
+            )
+
+            y2 = min(
+                frame.shape[0],
+                y + height + margin,
+            )
+
+            face = cv2.cvtColor(
+                frame[y1:y2, x1:x2],
+                cv2.COLOR_BGR2RGB,
+            )
 
             images.append(
-                Image.fromarray(rgb_frame)
+                Image.fromarray(face)
             )
 
         capture.release()
-
         return images
 
-    def extract_audio(self, video_path: str) -> str:
-        temporary_file = tempfile.NamedTemporaryFile(
-            suffix=".wav",
-            delete=False,
+    # --------------------------------------------------
+    # Supporting signals 1 + 2
+    # Blink rate and head position
+    # --------------------------------------------------
+
+    @staticmethod
+    def distance(a, b):
+        return math.hypot(
+            a.x - b.x,
+            a.y - b.y,
         )
 
-        temporary_file.close()
-
-        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-
-        command = [
-            ffmpeg_path,
-            "-y",
-            "-i",
-            video_path,
-            "-vn",
-            "-ac",
-            "1",
-            "-ar",
-            "16000",
-            "-c:a",
-            "pcm_s16le",
-            temporary_file.name,
+    def eye_ratio(self, landmarks, indexes):
+        p1, p2, p3, p4, p5, p6 = [
+            landmarks[index]
+            for index in indexes
         ]
 
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
+        horizontal = self.distance(
+            p1,
+            p4,
         )
 
-        if result.returncode != 0:
-            Path(temporary_file.name).unlink(
-                missing_ok=True
-            )
+        vertical = (
+            self.distance(p2, p6)
+            + self.distance(p3, p5)
+        )
 
+        return (
+            vertical / (2 * horizontal)
+            if horizontal
+            else 0
+        )
+
+    def visual_signals(self, video_path):
+        capture = cv2.VideoCapture(
+            video_path
+        )
+
+        fps = (
+            capture.get(
+                cv2.CAP_PROP_FPS
+            )
+            or 30
+        )
+
+        duration = (
+            int(
+                capture.get(
+                    cv2.CAP_PROP_FRAME_COUNT
+                )
+            )
+            / fps
+        )
+
+        left_eye = [
+            33, 160, 158,
+            133, 153, 144,
+        ]
+
+        right_eye = [
+            362, 385, 387,
+            263, 373, 380,
+        ]
+
+        blink_count = 0
+        eye_closed = False
+        head_offsets = []
+        frame_number = 0
+
+        with mp.solutions.face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+        ) as face_mesh:
+
+            while True:
+                ok, frame = capture.read()
+
+                if not ok:
+                    break
+
+                frame_number += 1
+
+                if frame_number % 3:
+                    continue
+
+                result = face_mesh.process(
+                    cv2.cvtColor(
+                        frame,
+                        cv2.COLOR_BGR2RGB,
+                    )
+                )
+
+                if (
+                    not result
+                    .multi_face_landmarks
+                ):
+                    continue
+
+                landmarks = (
+                    result
+                    .multi_face_landmarks[0]
+                    .landmark
+                )
+
+                eye = (
+                    self.eye_ratio(
+                        landmarks,
+                        left_eye,
+                    )
+                    + self.eye_ratio(
+                        landmarks,
+                        right_eye,
+                    )
+                ) / 2
+
+                if (
+                    eye < 0.20
+                    and not eye_closed
+                ):
+                    eye_closed = True
+
+                elif (
+                    eye >= 0.20
+                    and eye_closed
+                ):
+                    blink_count += 1
+                    eye_closed = False
+
+                head_offsets.append(
+                    abs(
+                        landmarks[1].x
+                        - 0.5
+                    )
+                )
+
+        capture.release()
+
+        if not head_offsets:
             raise RuntimeError(
-                "The audio track could not be extracted from the video."
+                "Face landmarks could not be measured."
             )
 
-        return temporary_file.name
-
-    def generate_recommendation(
-        self,
-        transcript: str,
-        wellbeing_score: float,
-        phrase: str,
-    ) -> str:
-        tokenizer, model = (
-            self._load_recommendation_model()
+        blink_rate = (
+            blink_count
+            / duration
+            * 60
+            if duration
+            else 0
         )
+
+        head_offset = mean(
+            head_offsets
+        )
+
+        if head_offset <= 0.08:
+            head_position = "Centred"
+
+        elif head_offset <= 0.18:
+            head_position = (
+                "Slightly off-centre"
+            )
+
+        else:
+            head_position = "Off-centre"
+
+        if blink_rate < 8:
+            blink_signal = clamp(
+                (8 - blink_rate) / 8
+            )
+
+        elif blink_rate > 25:
+            blink_signal = clamp(
+                (blink_rate - 25) / 25
+            )
+
+        else:
+            blink_signal = 0
+
+        return {
+            "blink_rate":
+                round(blink_rate, 2),
+
+            "head_position":
+                head_position,
+
+            "blink_signal":
+                blink_signal,
+
+            "head_signal":
+                clamp(
+                    (
+                        head_offset
+                        - 0.08
+                    )
+                    / 0.25
+                ),
+        }
+
+    # --------------------------------------------------
+    # Supporting signals 3 + 4 + 5
+    # Speech rate, disfluency and lexical variety
+    # --------------------------------------------------
+
+    def speech_signals(
+        self,
+        transcript,
+        audio_path,
+        language_name,
+    ):
+        duration = librosa.get_duration(
+            path=audio_path
+        )
+
+        if language_name == "Chinese":
+            words = re.findall(
+                r"[\u4e00-\u9fff]",
+                transcript,
+            )
+
+        else:
+            words = [
+                token.lower()
+                for token
+                in wordpunct_tokenize(
+                    transcript
+                )
+                if any(
+                    letter.isalpha()
+                    for letter in token
+                )
+            ]
+
+        speech_rate = (
+            len(words)
+            / duration
+            * 60
+            if duration
+            else 0
+        )
+
+        lexical_variety = (
+            len(set(words))
+            / len(words)
+            if words
+            else 0
+        )
+
+        fillers = FILLERS[
+            language_name
+        ]
+
+        if language_name in {
+            "Chinese",
+            "Tamil",
+        }:
+            disfluencies = sum(
+                transcript.count(word)
+                for word in fillers
+            )
+
+        else:
+            disfluencies = sum(
+                word in fillers
+                for word in words
+            )
+
+        disfluency_rate = (
+            disfluencies
+            / len(words)
+            if words
+            else 0
+        )
+
+        low, high = SPEECH_RANGES[
+            language_name
+        ]
+
+        if speech_rate < low:
+            speech_signal = clamp(
+                (
+                    low
+                    - speech_rate
+                )
+                / low
+            )
+
+        elif speech_rate > high:
+            speech_signal = clamp(
+                (
+                    speech_rate
+                    - high
+                )
+                / high
+            )
+
+        else:
+            speech_signal = 0
+
+        return {
+            "speech_rate":
+                round(
+                    speech_rate,
+                    2,
+                ),
+
+            "disfluency_rate":
+                round(
+                    disfluency_rate,
+                    3,
+                ),
+
+            "lexical_variety":
+                round(
+                    lexical_variety,
+                    3,
+                ),
+
+            "speech_signal":
+                speech_signal,
+
+            "disfluency_signal":
+                clamp(
+                    disfluency_rate
+                    / 0.10
+                ),
+
+            "lexical_signal":
+                clamp(
+                    (
+                        0.45
+                        - lexical_variety
+                    )
+                    / 0.45
+                ),
+        }
+
+    # --------------------------------------------------
+    # Fusion
+    # --------------------------------------------------
+
+    def fuse(
+        self,
+        primary_scores,
+        supporting_scores,
+    ):
+        primary = mean(
+            primary_scores
+        )
+
+        supporting_weight = (
+            len(supporting_scores)
+            * AUXILIARY_WEIGHT
+        )
+
+        primary_weight = (
+            1
+            - supporting_weight
+        )
+
+        strain = (
+            primary
+            * primary_weight
+            + sum(
+                score
+                * AUXILIARY_WEIGHT
+                for score
+                in supporting_scores
+            )
+        )
+
+        supporting = (
+            mean(supporting_scores)
+            if supporting_scores
+            else 0
+        )
+
+        return (
+            primary,
+            supporting,
+            strain,
+            primary_weight,
+        )
+
+    # --------------------------------------------------
+    # Video audio extraction
+    # --------------------------------------------------
+
+    def extract_audio(
+        self,
+        video_path,
+    ):
+        output = (
+            tempfile.NamedTemporaryFile(
+                suffix=".wav",
+                delete=False,
+            )
+        )
+
+        output.close()
+
+        subprocess.run(
+            [
+                imageio_ffmpeg
+                .get_ffmpeg_exe(),
+
+                "-y",
+                "-i",
+                video_path,
+
+                "-vn",
+                "-ac",
+                "1",
+
+                "-ar",
+                "16000",
+
+                "-c:a",
+                "pcm_s16le",
+
+                output.name,
+            ],
+            capture_output=True,
+        )
+
+        return output.name
+
+    # --------------------------------------------------
+    # Qwen recommendation
+    # --------------------------------------------------
+
+    def recommendation(
+        self,
+        english_text,
+        wellbeing_score,
+        summary,
+        language_name,
+        trend,
+    ):
+        generator = self.load_qwen()
+
+        support_note = ""
+
+        if wellbeing_score < 35:
+            support_note = (
+                " Include one recommendation "
+                "to contact a trusted person "
+                "or qualified healthcare professional."
+            )
 
         messages = [
             {
                 "role": "system",
                 "content": (
-                    "You are a cautious workplace wellbeing support assistant. "
-                    "You do not diagnose medical conditions. Give practical, "
-                    "supportive and low-risk suggestions."
+                    "You are a workplace wellbeing "
+                    "support assistant. "
+                    "Do not diagnose medical conditions."
                 ),
             },
             {
                 "role": "user",
                 "content": (
-                    "Create exactly three short numbered recommendations for "
-                    "a healthcare worker based on this experimental check-in. "
-                    "Do not mention AI model scores. Do not diagnose. Each item "
-                    "must be one short sentence.\n\n"
-                    f"Summary: {phrase}\n"
-                    f"Wellbeing score: {wellbeing_score:.0f}/100\n"
-                    f"Transcript: {transcript[:1200]}"
+                    "Write exactly 3 short wellbeing "
+                    "recommendations in English.\n"
+                    "Write each recommendation on a "
+                    "separate numbered line.\n"
+                    "Make each recommendation different "
+                    "and practical.\n"
+                    "Do not repeat ideas."
+                    f"{support_note}\n\n"
+                    f"Wellbeing score: "
+                    f"{wellbeing_score:.0f}/100\n"
+                    f"Summary: {summary}\n"
+                    f"Trend: {trend}\n"
+                    f"Transcript: "
+                    f"{english_text[:1200]}"
                 ),
             },
         ]
 
-        prompt = tokenizer.apply_chat_template(
+        result = generator(
             messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-
-        model_inputs = tokenizer(
-            [prompt],
-            return_tensors="pt",
-        )
-
-        model_inputs = {
-            key: value.to(model.device)
-            for key, value in model_inputs.items()
-        }
-
-        generated_ids = model.generate(
-            **model_inputs,
-            max_new_tokens=150,
+            max_new_tokens=180,
             do_sample=False,
-            repetition_penalty=1.05,
+            pad_token_id=
+                generator.tokenizer
+                .eos_token_id,
+        )[0]["generated_text"]
+
+        english = (
+            result[-1]["content"]
+            .strip()
         )
 
-        prompt_length = model_inputs[
-            "input_ids"
-        ].shape[1]
+        # Qwen is released before NLLB is loaded.
+        self.release_qwen()
 
-        response_ids = generated_ids[
-            :,
-            prompt_length:
-        ]
-
-        recommendation = tokenizer.batch_decode(
-            response_ids,
-            skip_special_tokens=True,
-        )[0].strip()
-
-        if not recommendation:
-            raise RuntimeError(
-                "The recommendation model returned an empty response."
-            )
-
-        return recommendation
-
-    def fallback_recommendation(
-        self,
-        wellbeing_score: float,
-    ) -> str:
-        if wellbeing_score >= 70:
-            return (
-                "1. Keep one routine today that supports your current balance.\n"
-                "2. Take a short pause between demanding tasks when possible.\n"
-                "3. Check in again later to notice any meaningful change."
-            )
-
-        if wellbeing_score >= 40:
-            return (
-                "1. Take a brief pause and reduce one non-urgent demand today.\n"
-                "2. Speak with someone you trust about what feels most difficult.\n"
-                "3. Protect time for rest before your next demanding shift."
-            )
-
-        return (
-            "1. Pause and contact someone you trust for support today.\n"
-            "2. Reduce non-essential demands and prioritise rest where possible.\n"
-            "3. Consider speaking with a qualified professional if the strain continues."
+        return translate_text(
+            english,
+            language_name,
         )
+
+    # --------------------------------------------------
+    # Full analysis
+    # --------------------------------------------------
 
     def analyse(
         self,
-        recording_path: str,
-        recording_type: str,
-        progress_callback,
-        transcript: str | None = None,
-    ) -> dict:
+        recording_path,
+        recording_type,
+        progress,
+        transcript=None,
+        *,
+        language_name="English",
+        trend=(
+            "No previous check-in "
+            "trend is available."
+        ),
+    ):
         temporary_audio = None
 
         try:
             if recording_type == "video":
-                progress_callback(
-                    "Extracting the audio track..."
+                progress(
+                    "processing_extract_audio"
                 )
 
-                temporary_audio = self.extract_audio(
+                temporary_audio = (
+                    self.extract_audio(
+                        recording_path
+                    )
+                )
+
+                audio_path = (
+                    temporary_audio
+                )
+
+            else:
+                audio_path = (
                     recording_path
                 )
 
-                audio_path = temporary_audio
-            else:
-                audio_path = recording_path
-
             if not transcript:
-                progress_callback(
-                    "Transcribing speech with Whisper..."
+                progress(
+                    "processing_transcription"
                 )
 
                 transcript = self.transcribe(
-                    audio_path
+                    audio_path,
+                    language_name,
                 )
 
-            transcript = transcript.strip()
+            # RoBERTa and Qwen always receive English.
+            progress("processing_text")
 
-            if not transcript:
-                raise RuntimeError(
-                    "Whisper could not produce a transcript from this recording."
+            if language_name == "English":
+                english_text = transcript
+
+            else:
+                english_text = (
+                    self.translate_to_english(
+                        audio_path,
+                        language_name,
+                    )
                 )
 
-            progress_callback(
-                "Analysing the transcript with RoBERTa..."
+            text = self.text_score(
+                english_text
             )
 
-            text_negative = self.text_score(
-                transcript
-            )
+            self.release_whisper()
 
-            progress_callback(
-                "Analysing voice emotion with AST..."
-            )
+            progress("processing_audio")
 
-            audio_negative = self.audio_score(
+            audio = self.audio_score(
                 audio_path
             )
 
-            vision_negative = None
+            primary_scores = [
+                text,
+                audio,
+            ]
+
+            vision = None
+            visual = {}
 
             if recording_type == "video":
-                progress_callback(
-                    "Analysing facial expressions with ViT..."
+                progress(
+                    "processing_vision"
                 )
 
-                vision_negative = self.vision_score(
+                vision = self.vision_score(
                     recording_path
                 )
 
-            progress_callback(
-                "Fusing the available model scores..."
-            )
-
-            modality_scores = [
-                text_negative,
-                audio_negative,
-            ]
-
-            if vision_negative is not None:
-                modality_scores.append(
-                    vision_negative
+                primary_scores.append(
+                    vision
                 )
 
-            strain_score = float(
-                mean(modality_scores) * 100.0
+                progress(
+                    "processing_signals"
+                )
+
+                visual = (
+                    self.visual_signals(
+                        recording_path
+                    )
+                )
+
+            else:
+                progress(
+                    "processing_signals"
+                )
+
+            speech = self.speech_signals(
+                transcript,
+                audio_path,
+                language_name,
             )
 
-            wellbeing_score = float(
-                100.0 - strain_score
+            supporting = [
+                speech["speech_signal"],
+                speech["disfluency_signal"],
+                speech["lexical_signal"],
+            ]
+
+            if recording_type == "video":
+                supporting += [
+                    visual["blink_signal"],
+                    visual["head_signal"],
+                ]
+
+            progress(
+                "processing_fusion"
+            )
+
+            (
+                primary_strain,
+                supporting_strain,
+                strain,
+                primary_weight,
+            ) = self.fuse(
+                primary_scores,
+                supporting,
+            )
+
+            strain_score = (
+                strain * 100
+            )
+
+            wellbeing_score = (
+                100 - strain_score
             )
 
             phrase, explanation = (
-                self._summary_for_score(
+                self.summary(
                     wellbeing_score
                 )
             )
 
-            # The three emotion models are no longer needed once fusion is complete.
-            # Releasing them leaves more memory available for Qwen.
             self.release_analysis_models()
 
-            progress_callback(
-                "Generating supportive recommendations with Qwen..."
+            progress(
+                "processing_recommendation"
             )
 
-            recommendation_source = (
-                RECOMMENDATION_MODEL_ID
+            recommendation = (
+                self.recommendation(
+                    english_text,
+                    wellbeing_score,
+                    phrase,
+                    language_name,
+                    trend,
+                )
             )
-
-            try:
-                recommendation = (
-                    self.generate_recommendation(
-                        transcript,
-                        wellbeing_score,
-                        phrase,
-                    )
-                )
-            except Exception:
-                recommendation = (
-                    self.fallback_recommendation(
-                        wellbeing_score
-                    )
-                )
-
-                recommendation_source = "fallback"
 
             return {
-                "recording_type": recording_type,
-                "transcript": transcript,
-                "text_score": round(
-                    text_negative * 100.0,
-                    2,
-                ),
-                "audio_score": round(
-                    audio_negative * 100.0,
-                    2,
-                ),
-                "vision_score": (
+                "recording_type":
+                    recording_type,
+
+                "language":
+                    language_name,
+
+                "transcript":
+                    transcript,
+
+                "text_score":
                     round(
-                        vision_negative * 100.0,
+                        text * 100,
                         2,
-                    )
-                    if vision_negative is not None
-                    else None
-                ),
-                "strain_score": round(
-                    strain_score,
-                    2,
-                ),
-                "wellbeing_score": round(
-                    wellbeing_score,
-                    2,
-                ),
-                "phrase": phrase,
-                "explanation": explanation,
-                "recommendation": recommendation,
-                "recommendation_source": (
-                    recommendation_source
-                ),
+                    ),
+
+                "audio_score":
+                    round(
+                        audio * 100,
+                        2,
+                    ),
+
+                "vision_score":
+                    (
+                        round(
+                            vision * 100,
+                            2,
+                        )
+                        if vision
+                        is not None
+                        else None
+                    ),
+
+                # Five supporting signals
+                "blink_rate":
+                    visual.get(
+                        "blink_rate"
+                    ),
+
+                "head_position":
+                    visual.get(
+                        "head_position"
+                    ),
+
+                "speech_rate":
+                    speech[
+                        "speech_rate"
+                    ],
+
+                "disfluency_rate":
+                    speech[
+                        "disfluency_rate"
+                    ],
+
+                "lexical_variety":
+                    speech[
+                        "lexical_variety"
+                    ],
+
+                "primary_strain_score":
+                    round(
+                        primary_strain
+                        * 100,
+                        2,
+                    ),
+
+                "auxiliary_strain_score":
+                    round(
+                        supporting_strain
+                        * 100,
+                        2,
+                    ),
+
+                "strain_score":
+                    round(
+                        strain_score,
+                        2,
+                    ),
+
+                "wellbeing_score":
+                    round(
+                        wellbeing_score,
+                        2,
+                    ),
+
+                "primary_weight":
+                    round(
+                        primary_weight
+                        * 100,
+                        2,
+                    ),
+
+                "phrase":
+                    phrase,
+
+                "explanation":
+                    explanation,
+
+                "recommendation":
+                    recommendation,
+
+                "recommendation_source":
+                    RECOMMENDATION_MODEL_ID,
             }
 
         finally:
             if temporary_audio:
-                Path(temporary_audio).unlink(
+                Path(
+                    temporary_audio
+                ).unlink(
                     missing_ok=True
                 )
 
-    def _summary_for_score(
-        self,
-        wellbeing_score: float,
-    ) -> tuple[str, str]:
-        if wellbeing_score >= 75:
+    @staticmethod
+    def summary(score):
+        if score >= 67:
             return (
                 "Today feels steady",
-                "Your available signals suggest relatively stable emotional energy today.",
+                "Your signals suggest "
+                "a higher wellbeing range.",
             )
 
-        if wellbeing_score >= 55:
+        if score >= 34:
             return (
-                "Today feels balanced",
-                "Your available signals suggest some strain, but the overall pattern remains fairly balanced.",
-            )
-
-        if wellbeing_score >= 35:
-            return (
-                "Today feels heavier",
-                "Your available signals suggest lower energy and increased emotional strain today.",
+                "Today feels mixed",
+                "Your signals suggest "
+                "a moderate wellbeing range.",
             )
 
         return (
-            "Today feels difficult",
-            "Your available signals suggest a high level of emotional strain today. Consider pausing and seeking support.",
+            "Today needs more care",
+            "Your signals suggest "
+            "a lower wellbeing range.",
         )
 
+    # --------------------------------------------------
+    # Memory
+    # --------------------------------------------------
+
     def release_whisper(self):
-        self._whisper = None
-        self._clean_memory()
+        self.whisper = None
+        self.clean_memory()
 
     def release_analysis_models(self):
-        self._text_classifier = None
-        self._audio_classifier = None
-        self._vision_classifier = None
-        self._clean_memory()
+        self.text_model = None
+        self.audio_processor = None
+        self.audio_model = None
+        self.vision_model = None
+        self.clean_memory()
 
-    def release_recommendation_model(self):
-        self._recommendation_tokenizer = None
-        self._recommendation_model = None
-        self._clean_memory()
+    def release_qwen(self):
+        self.qwen = None
+        self.clean_memory()
 
-    def _clean_memory(self):
+    @staticmethod
+    def clean_memory():
         gc.collect()
 
         if torch.cuda.is_available():
@@ -736,6 +1239,10 @@ class MultimodalPipeline:
 _PIPELINE = MultimodalPipeline()
 
 
+# --------------------------------------------------
+# Whisper worker
+# --------------------------------------------------
+
 class TranscriptionWorker(QThread):
     progress = Signal(str)
     completed = Signal(str)
@@ -743,14 +1250,25 @@ class TranscriptionWorker(QThread):
 
     def __init__(
         self,
-        recording_path: str,
-        recording_type: str,
+        recording_path,
+        recording_type,
         parent=None,
+        *,
+        language_name="English",
     ):
         super().__init__(parent)
 
-        self.recording_path = recording_path
-        self.recording_type = recording_type
+        self.recording_path = (
+            recording_path
+        )
+
+        self.recording_type = (
+            recording_type
+        )
+
+        self.language_name = (
+            language_name
+        )
 
     def run(self):
         temporary_audio = None
@@ -758,7 +1276,7 @@ class TranscriptionWorker(QThread):
         try:
             if self.recording_type == "video":
                 self.progress.emit(
-                    "Extracting audio for transcription..."
+                    "transcription_extract_audio"
                 )
 
                 temporary_audio = (
@@ -767,22 +1285,25 @@ class TranscriptionWorker(QThread):
                     )
                 )
 
-                audio_path = temporary_audio
+                audio_path = (
+                    temporary_audio
+                )
+
             else:
-                audio_path = self.recording_path
+                audio_path = (
+                    self.recording_path
+                )
 
             self.progress.emit(
-                "Creating transcript with Whisper..."
+                "transcription_whisper"
             )
 
-            transcript = _PIPELINE.transcribe(
-                audio_path
-            )
-
-            if not transcript:
-                raise RuntimeError(
-                    "Whisper could not produce a transcript."
+            transcript = (
+                _PIPELINE.transcribe(
+                    audio_path,
+                    self.language_name,
                 )
+            )
 
             self.completed.emit(
                 transcript
@@ -795,12 +1316,18 @@ class TranscriptionWorker(QThread):
 
         finally:
             if temporary_audio:
-                Path(temporary_audio).unlink(
+                Path(
+                    temporary_audio
+                ).unlink(
                     missing_ok=True
                 )
 
             _PIPELINE.release_whisper()
 
+
+# --------------------------------------------------
+# Complete analysis worker
+# --------------------------------------------------
 
 class AnalysisWorker(QThread):
     progress = Signal(str)
@@ -809,16 +1336,30 @@ class AnalysisWorker(QThread):
 
     def __init__(
         self,
-        recording_path: str,
-        recording_type: str,
-        transcript: str,
+        recording_path,
+        recording_type,
+        transcript,
         parent=None,
+        *,
+        language_name="English",
+        trend=(
+            "No previous check-in "
+            "trend is available."
+        ),
     ):
         super().__init__(parent)
 
-        self.recording_path = recording_path
-        self.recording_type = recording_type
+        self.recording_path = (
+            recording_path
+        )
+
+        self.recording_type = (
+            recording_type
+        )
+
         self.transcript = transcript
+        self.language_name = language_name
+        self.trend = trend
 
     def run(self):
         try:
@@ -827,13 +1368,19 @@ class AnalysisWorker(QThread):
                 self.recording_type,
                 self.progress.emit,
                 self.transcript,
+                language_name=
+                    self.language_name,
+                trend=self.trend,
             )
 
             self.completed.emit(result)
 
         except Exception as error:
-            self.failed.emit(str(error))
+            self.failed.emit(
+                str(error)
+            )
 
         finally:
+            _PIPELINE.release_whisper()
             _PIPELINE.release_analysis_models()
-            _PIPELINE.release_recommendation_model()
+            _PIPELINE.release_qwen()

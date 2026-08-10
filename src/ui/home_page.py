@@ -1,24 +1,52 @@
-from PySide6.QtCore import (
-    QEasingCurve,
-    QParallelAnimationGroup,
-    QPropertyAnimation,
-    Qt,
-    Signal
-)
+from pathlib import Path
 
-from PySide6.QtGui import QColor
-
+from PySide6.QtCore import QDateTime, QLocale, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QFrame,
-    QGraphicsDropShadowEffect,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-    QWidget
+    QFrame, QHBoxLayout, QLabel, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget,
 )
+
+from src.ui.translations import ENGLISH_TEXT, get_text
+
+
+ROOT = Path(__file__).resolve().parents[2]
+IMAGES = ROOT / "src" / "images"
+
+LOCALES = {
+    "English": "en_SG",
+    "Malay": "ms_MY",
+    "Chinese": "zh_CN",
+    "Tamil": "ta_IN",
+}
+
+HOME_TEXT = {
+    "home_eyebrow": "PRIVATE WELLBEING CHECK-IN",
+    "home_description": "Take a short check-in to reflect on how you are feeling today.",
+
+    "good_morning": "Good morning",
+    "good_afternoon": "Good afternoon",
+    "good_evening": "Good evening",
+
+    "today": "Today",
+    "wellbeing_reminders": "Wellbeing reminders",
+
+    "tip_pause_title": "Pause and reset",
+    "tip_pause_text":
+        "Take one quiet minute between demanding tasks to slow down and reset.",
+
+    "tip_hydrate_title": "Hydrate and refuel",
+    "tip_hydrate_text":
+        "Remember water and regular meals during long or busy shifts.",
+
+    "tip_pattern_title": "Notice your patterns",
+    "tip_pattern_text":
+        "Regular check-ins can help you notice changes in how you have been feeling.",
+
+    "home_private_note": "Your check-in history is stored locally on this device.",
+}
+
+ENGLISH_TEXT.update(HOME_TEXT)
 
 
 class HoverSidebar(QFrame):
@@ -28,802 +56,351 @@ class HoverSidebar(QFrame):
     settings_requested = Signal()
     logout_requested = Signal()
 
-    COLLAPSED_WIDTH = 76
-    EXPANDED_WIDTH = 220
+    COLLAPSED = 76
+    EXPANDED = 220
 
     def __init__(self):
         super().__init__()
 
+        self.current_language = "English"
+        self.expanded = False
+
         self.setObjectName("sideBar")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setFixedWidth(self.COLLAPSED)
 
-        self.setAttribute(
-            Qt.WA_StyledBackground,
-            True
-        )
+        self.home_button = self.make_button("home_icon.png", "home", True)
+        self.check_in_button = self.make_button("check_in_icon.png", "check_in")
+        self.trends_button = self.make_button("trends_icon.png", "trends")
+        self.settings_button = self.make_button("settings_icon.png", "settings")
+        self.logout_button = self.make_button("logout.png", "logout")
 
-        self.setMinimumWidth(
-            self.COLLAPSED_WIDTH
-        )
-
-        self.setMaximumWidth(
-            self.COLLAPSED_WIDTH
-        )
-
-        self._expanded = False
-        self._buttons = []
-
-        self.brand = QLabel("♥")
-        self.brand.setObjectName("sideBrand")
-        self.brand.setAlignment(Qt.AlignCenter)
-        self.brand.setFixedHeight(68)
-
-        self.home_button = self._create_button(
-            "⌂",
-            "Home",
-            active=True
-        )
-
-        self.check_in_button = self._create_button(
-            "▶",
-            "Check-in"
-        )
-
-        self.trends_button = self._create_button(
-            "📈",
-            "Trends"
-        )
-
-        self.settings_button = self._create_button(
-            "⚙",
-            "Settings"
-        )
-
-        self.logout_button = self._create_button(
-            "↩",
-            "Log out"
-        )
-
-        self.home_button.clicked.connect(
-            self.home_requested.emit
-        )
-
-        self.check_in_button.clicked.connect(
-            self.check_in_requested.emit
-        )
-
-        self.trends_button.clicked.connect(
-            self.trends_requested.emit
-        )
-
-        self.settings_button.clicked.connect(
-            self.settings_requested.emit
-        )
-
-        self.logout_button.clicked.connect(
-            self.logout_requested.emit
-        )
+        self.home_button.clicked.connect(self.home_requested.emit)
+        self.check_in_button.clicked.connect(self.check_in_requested.emit)
+        self.trends_button.clicked.connect(self.trends_requested.emit)
+        self.settings_button.clicked.connect(self.settings_requested.emit)
+        self.logout_button.clicked.connect(self.logout_requested.emit)
 
         layout = QVBoxLayout(self)
-
-        layout.setContentsMargins(
-            10,
-            12,
-            10,
-            12
-        )
-
-        layout.setSpacing(8)
-
-        layout.addWidget(self.brand)
-        layout.addSpacing(14)
-
-        layout.addWidget(
-            self.home_button
-        )
-
-        layout.addWidget(
-            self.check_in_button
-        )
-
-        layout.addWidget(
-            self.trends_button
-        )
-
+        layout.setContentsMargins(10, 18, 10, 12)
+        layout.setSpacing(6)
+        layout.addWidget(self.home_button)
+        layout.addWidget(self.check_in_button)
+        layout.addWidget(self.trends_button)
         layout.addStretch()
+        layout.addWidget(self.settings_button)
+        layout.addWidget(self.logout_button)
 
-        layout.addWidget(
-            self.settings_button
-        )
-
-        layout.addWidget(
-            self.logout_button
-        )
-
-        self.minimum_animation = QPropertyAnimation(
-            self,
-            b"minimumWidth"
-        )
-
-        self.maximum_animation = QPropertyAnimation(
-            self,
-            b"maximumWidth"
-        )
-
-        for animation in (
-            self.minimum_animation,
-            self.maximum_animation
-        ):
-            animation.setDuration(180)
-
-            animation.setEasingCurve(
-                QEasingCurve.OutCubic
-            )
-
-        self.animation_group = QParallelAnimationGroup(
-            self
-        )
-
-        self.animation_group.addAnimation(
-            self.minimum_animation
-        )
-
-        self.animation_group.addAnimation(
-            self.maximum_animation
-        )
-
-    def _create_button(
-        self,
-        symbol,
-        label,
-        active=False
-    ):
-        button = QPushButton(symbol)
-
-        button.setObjectName(
-            "navButton"
-        )
-
-        button.setFixedHeight(50)
-
-        button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        button.setToolTip(label)
-
-        button.setProperty(
-            "active",
-            active
-        )
-
-        button.setProperty(
-            "expanded",
-            False
-        )
-
-        self._buttons.append(
-            (
-                button,
-                symbol,
-                label
-            )
-        )
-
+    def make_button(self, image, key, active=False):
+        button = QPushButton()
+        button.setObjectName("navButton")
+        button.setIcon(QIcon(str(IMAGES / image)))
+        button.setIconSize(QSize(38, 38))
+        button.setFixedHeight(54)
+        button.setCursor(Qt.PointingHandCursor)
+        button.setProperty("active", active)
+        button.setProperty("expanded", False)
+        button.setProperty("textKey", key)
         return button
 
-    def enterEvent(self, event):
-        self._change_width(True)
+    def buttons(self):
+        return (
+            self.home_button,
+            self.check_in_button,
+            self.trends_button,
+            self.settings_button,
+            self.logout_button,
+        )
 
+    def set_language(self, language):
+        self.current_language = language
+
+        for button in self.buttons():
+            text = get_text(language, button.property("textKey"))
+            button.setToolTip(text)
+            button.setText(f"   {text}" if self.expanded else "")
+
+    def enterEvent(self, event):
+        self.set_expanded(True)
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self._change_width(False)
-
+        self.set_expanded(False)
         super().leaveEvent(event)
 
-    def _change_width(
-        self,
-        expanded
-    ):
-        if self._expanded == expanded:
-            return
+    def set_expanded(self, expanded):
+        self.expanded = expanded
+        self.setFixedWidth(self.EXPANDED if expanded else self.COLLAPSED)
 
-        self._expanded = expanded
-
-        start_width = self.width()
-
-        if expanded:
-            end_width = self.EXPANDED_WIDTH
-            self.brand.setText("♥   Solace")
-        else:
-            end_width = self.COLLAPSED_WIDTH
-            self.brand.setText("♥")
-
-        for button, symbol, label in self._buttons:
-            if expanded:
-                button.setText(
-                    f"{symbol}    {label}"
-                )
-            else:
-                button.setText(symbol)
-
-            button.setProperty(
-                "expanded",
-                expanded
-            )
-
-            button.style().unpolish(
-                button
-            )
-
-            button.style().polish(
-                button
-            )
-
-        self.animation_group.stop()
-
-        self.minimum_animation.setStartValue(
-            start_width
-        )
-
-        self.minimum_animation.setEndValue(
-            end_width
-        )
-
-        self.maximum_animation.setStartValue(
-            start_width
-        )
-
-        self.maximum_animation.setEndValue(
-            end_width
-        )
-
-        self.animation_group.start()
+        for button in self.buttons():
+            text = get_text(self.current_language, button.property("textKey"))
+            button.setText(f"   {text}" if expanded else "")
+            button.setProperty("expanded", expanded)
+            button.style().unpolish(button)
+            button.style().polish(button)
 
 
 class HomePage(QWidget):
-    logout_requested = Signal()
     check_in_requested = Signal()
     trends_requested = Signal()
     settings_requested = Signal()
-    help_requested = Signal()
+    logout_requested = Signal()
 
     def __init__(self):
         super().__init__()
 
+        self.current_language = "English"
+        self.first_name = ""
+        self.locale = QLocale(LOCALES["English"])
+
         self.sidebar = HoverSidebar()
+        self.sidebar.check_in_requested.connect(self.check_in_requested.emit)
+        self.sidebar.trends_requested.connect(self.trends_requested.emit)
+        self.sidebar.settings_requested.connect(self.settings_requested.emit)
+        self.sidebar.logout_requested.connect(self.logout_requested.emit)
 
-        self.sidebar.logout_requested.connect(
-            self.logout_requested.emit
-        )
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.sidebar)
+        layout.addWidget(self.build_content(), 1)
 
-        self.sidebar.check_in_requested.connect(
-            self.check_in_requested.emit
-        )
+        self.clock_timer = QTimer(self)
+        self.clock_timer.timeout.connect(self.update_clock)
+        self.clock_timer.start(1000)
 
-        self.sidebar.trends_requested.connect(
-            self.trends_requested.emit
-        )
+        self.set_language("English")
 
-        self.sidebar.settings_requested.connect(
-            self.settings_requested.emit
-        )
-
-        content = self._build_content()
-
-        root_layout = QHBoxLayout(self)
-
-        root_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        root_layout.setSpacing(0)
-
-        root_layout.addWidget(
-            self.sidebar
-        )
-
-        root_layout.addWidget(
-            content,
-            1
-        )
-
-    def _build_content(self):
+    def build_content(self):
         content = QWidget()
+        content.setObjectName("homeContent")
+        content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        content.setObjectName(
-            "homeContent"
+        hero_row = QHBoxLayout()
+        hero_row.setSpacing(16)
+        hero_row.addWidget(self.build_hero(), 3)
+        hero_row.addWidget(self.build_time_card(), 1)
+
+        self.reminder_title = QLabel()
+        self.reminder_title.setObjectName("sectionTitle")
+
+        pause, self.pause_title, self.pause_text = self.tip_card()
+        hydrate, self.hydrate_title, self.hydrate_text = self.tip_card()
+        pattern, self.pattern_title, self.pattern_text = self.tip_card()
+
+        tips = QHBoxLayout()
+        tips.setSpacing(16)
+        tips.addWidget(pause, 1)
+        tips.addWidget(hydrate, 1)
+        tips.addWidget(pattern, 1)
+
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(40, 26, 40, 30)
+        layout.setSpacing(20)
+        layout.addLayout(self.build_header())
+        layout.addSpacing(4)
+        layout.addLayout(hero_row)
+        layout.addWidget(self.reminder_title)
+        layout.addLayout(tips)
+        layout.addStretch()
+
+        return content
+
+    def build_header(self):
+        heart = QLabel()
+        heart.setFixedSize(30, 30)
+        heart.setPixmap(
+            QPixmap(str(IMAGES / "heart.png")).scaled(
+                28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
         )
-
-        content.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Expanding
-        )
-
-        header = self._build_header()
-        hero_card = self._build_hero_card()
-
-        section_title = QLabel("Explore")
-
-        section_title.setObjectName(
-            "sectionTitle"
-        )
-
-        features_layout = QHBoxLayout()
-
-        features_layout.setSpacing(16)
-
-        features_layout.addWidget(
-            self._feature_card(
-                "✦",
-                "Check-in",
-                "Use text, voice or optional video."
-            ),
-            1
-        )
-
-        features_layout.addWidget(
-            self._feature_card(
-                "📈",
-                "Trends",
-                "View changes in your wellbeing."
-            ),
-            1
-        )
-
-        features_layout.addWidget(
-            self._feature_card(
-                "◆",
-                "Privacy",
-                "Your data stays on this device."
-            ),
-            1
-        )
-
-        page_layout = QVBoxLayout(content)
-
-        page_layout.setContentsMargins(
-            40,
-            26,
-            40,
-            30
-        )
-
-        page_layout.setSpacing(20)
-
-        page_layout.addLayout(header)
-        page_layout.addWidget(hero_card)
-        page_layout.addWidget(section_title)
-        page_layout.addLayout(features_layout)
-        page_layout.addStretch()
-
-        self.floating_help_button = QPushButton(
-            "?"
-        )
-
-        self.floating_help_button.setObjectName(
-            "floatingHelpButton"
-        )
-
-        self.floating_help_button.setFixedSize(
-            58,
-            58
-        )
-
-        self.floating_help_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        self.floating_help_button.setToolTip(
-            "Open help"
-        )
-
-        self.floating_help_button.clicked.connect(
-            self.help_requested.emit
-        )
-
-        wrapper = QWidget()
-
-        wrapper.setObjectName(
-            "homeWrapper"
-        )
-
-        wrapper_layout = QGridLayout(
-            wrapper
-        )
-
-        wrapper_layout.setContentsMargins(
-            0,
-            0,
-            24,
-            24
-        )
-
-        wrapper_layout.addWidget(
-            content,
-            0,
-            0
-        )
-
-        wrapper_layout.addWidget(
-            self.floating_help_button,
-            0,
-            0,
-            Qt.AlignRight
-            | Qt.AlignBottom
-        )
-
-        return wrapper
-
-    def _build_header(self):
-        heart = QLabel("♥")
-        heart.setObjectName("homeHeart")
+        heart.setAlignment(Qt.AlignCenter)
 
         brand = QLabel("Solace")
         brand.setObjectName("homeBrand")
 
-        self.welcome_label = QLabel(
-            "Welcome"
-        )
-
-        self.welcome_label.setObjectName(
-            "welcomeLabel"
-        )
-
-        self.welcome_label.setAlignment(
-            Qt.AlignRight
-            | Qt.AlignVCenter
-        )
+        self.welcome_label = QLabel()
+        self.welcome_label.setObjectName("welcomeLabel")
+        self.welcome_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         layout = QHBoxLayout()
-
-        layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        layout.setSpacing(8)
-
+        layout.setSpacing(7)
         layout.addWidget(heart)
         layout.addWidget(brand)
         layout.addStretch()
-
-        layout.addWidget(
-            self.welcome_label
-        )
-
+        layout.addWidget(self.welcome_label)
         return layout
 
-    def _build_hero_card(self):
+    def build_hero(self):
         card = QFrame()
+        card.setObjectName("heroCard")
+        card.setAttribute(Qt.WA_StyledBackground, True)
+        card.setMinimumHeight(235)
 
-        card.setObjectName(
-            "heroCard"
-        )
+        self.hero_eyebrow = QLabel()
+        self.hero_eyebrow.setObjectName("heroEyebrow")
 
-        card.setAttribute(
-            Qt.WA_StyledBackground,
-            True
-        )
+        self.hero_title = QLabel()
+        self.hero_title.setObjectName("heroTitle")
+        self.hero_title.setWordWrap(True)
 
-        card.setMinimumHeight(240)
+        self.hero_description = QLabel()
+        self.hero_description.setObjectName("heroDescription")
+        self.hero_description.setWordWrap(True)
 
-        self._add_shadow(
-            card,
-            32,
-            8
-        )
+        self.start_button = QPushButton()
+        self.start_button.setObjectName("startCheckInButton")
+        self.start_button.setFixedHeight(50)
+        self.start_button.setMinimumWidth(210)
+        self.start_button.setCursor(Qt.PointingHandCursor)
+        self.start_button.clicked.connect(self.check_in_requested.emit)
 
-        eyebrow = QLabel(
-            "PRIVATE WELLBEING SUPPORT"
-        )
+        self.private_note = QLabel()
+        self.private_note.setObjectName("privacyNote")
+        self.private_note.setWordWrap(True)
 
-        eyebrow.setObjectName(
-            "heroEyebrow"
-        )
-
-        title = QLabel(
-            "Understand how you feel"
-        )
-
-        title.setObjectName(
-            "heroTitle"
-        )
-
-        description = QLabel(
-            "Complete a short check-in using "
-            "the signals you choose."
-        )
-
-        description.setObjectName(
-            "heroDescription"
-        )
-
-        description.setWordWrap(True)
-
-        description.setMaximumWidth(
-            520
-        )
-
-        self.start_button = QPushButton(
-            "Start check-in"
-        )
-
-        self.start_button.setObjectName(
-            "startCheckInButton"
-        )
-
-        self.start_button.setCursor(
-            Qt.PointingHandCursor
-        )
-
-        self.start_button.setFixedSize(
-            210,
-            50
-        )
-
-        self.start_button.clicked.connect(
-            self.check_in_requested.emit
-        )
-
-        privacy_note = QLabel(
-            "Private and stored locally."
-        )
-
-        privacy_note.setObjectName(
-            "privacyNote"
-        )
-
-        text_layout = QVBoxLayout()
-
-        text_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        text_layout.setSpacing(10)
-
-        text_layout.addWidget(eyebrow)
-        text_layout.addWidget(title)
-        text_layout.addWidget(description)
-
-        text_layout.addSpacing(6)
-
-        text_layout.addWidget(
-            self.start_button,
-            0,
-            Qt.AlignLeft
-        )
-
-        text_layout.addWidget(
-            privacy_note
-        )
-
-        visual_circle = QFrame()
-
-        visual_circle.setObjectName(
-            "heroVisualCircle"
-        )
-
-        visual_circle.setFixedSize(
-            150,
-            150
-        )
-
-        visual_circle.setAttribute(
-            Qt.WA_StyledBackground,
-            True
-        )
-
-        visual_heart = QLabel("♥")
-
-        visual_heart.setObjectName(
-            "heroVisualHeart"
-        )
-
-        visual_heart.setAlignment(
-            Qt.AlignCenter
-        )
-
-        circle_layout = QVBoxLayout(
-            visual_circle
-        )
-
-        circle_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        circle_layout.addWidget(
-            visual_heart
-        )
-
-        visual_text = QLabel(
-            "Private  •  Local"
-        )
-
-        visual_text.setObjectName(
-            "heroVisualText"
-        )
-
-        visual_text.setAlignment(
-            Qt.AlignCenter
-        )
-
-        visual_layout = QVBoxLayout()
-
-        visual_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0
-        )
-
-        visual_layout.setSpacing(12)
-
-        visual_layout.addStretch()
-
-        visual_layout.addWidget(
-            visual_circle,
-            0,
-            Qt.AlignHCenter
-        )
-
-        visual_layout.addWidget(
-            visual_text
-        )
-
-        visual_layout.addStretch()
-
-        layout = QHBoxLayout(card)
-
-        layout.setContentsMargins(
-            40,
-            30,
-            40,
-            30
-        )
-
-        layout.setSpacing(34)
-
-        layout.addLayout(
-            text_layout,
-            3
-        )
-
-        layout.addLayout(
-            visual_layout,
-            1
-        )
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(36, 28, 36, 28)
+        layout.setSpacing(10)
+        layout.addWidget(self.hero_eyebrow)
+        layout.addWidget(self.hero_title)
+        layout.addWidget(self.hero_description)
+        layout.addStretch()
+        layout.addWidget(self.start_button, 0, Qt.AlignLeft)
+        layout.addWidget(self.private_note)
 
         return card
 
-    def _feature_card(
-        self,
-        symbol,
-        title_text,
-        description_text
-    ):
+    def build_time_card(self):
         card = QFrame()
+        card.setObjectName("featureCard")
+        card.setAttribute(Qt.WA_StyledBackground, True)
+        card.setMinimumWidth(220)
 
-        card.setObjectName(
-            "featureCard"
-        )
+        self.today_title = QLabel()
+        self.today_title.setObjectName("featureTitle")
 
-        card.setAttribute(
-            Qt.WA_StyledBackground,
-            True
-        )
+        self.time_value = QLabel()
+        self.time_value.setObjectName("homeTime")
+        self.time_value.setAlignment(Qt.AlignCenter)
 
-        card.setMinimumHeight(150)
-
-        self._add_shadow(
-            card,
-            20,
-            5
-        )
-
-        icon = QLabel(symbol)
-
-        icon.setObjectName(
-            "featureIcon"
-        )
-
-        icon.setAlignment(
-            Qt.AlignCenter
-        )
-
-        icon.setFixedSize(
-            42,
-            42
-        )
-
-        title = QLabel(title_text)
-
-        title.setObjectName(
-            "featureTitle"
-        )
-
-        description = QLabel(
-            description_text
-        )
-
-        description.setObjectName(
-            "featureDescription"
-        )
-
-        description.setWordWrap(True)
+        self.date_value = QLabel()
+        self.date_value.setObjectName("featureDescription")
+        self.date_value.setAlignment(Qt.AlignCenter)
+        self.date_value.setWordWrap(True)
 
         layout = QVBoxLayout(card)
-
-        layout.setContentsMargins(
-            20,
-            18,
-            20,
-            18
-        )
-
+        layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(10)
-
-        layout.addWidget(icon)
-        layout.addWidget(title)
-        layout.addWidget(description)
+        layout.addWidget(self.today_title)
+        layout.addStretch()
+        layout.addWidget(self.time_value)
+        layout.addWidget(self.date_value)
         layout.addStretch()
 
         return card
 
-    def _add_shadow(
-        self,
-        widget,
-        blur_radius,
-        vertical_offset
-    ):
-        shadow = QGraphicsDropShadowEffect(
-            widget
-        )
+    def tip_card(self):
+        card = QFrame()
+        card.setObjectName("featureCard")
+        card.setAttribute(Qt.WA_StyledBackground, True)
+        card.setMinimumHeight(135)
 
-        shadow.setBlurRadius(
-            blur_radius
-        )
+        title = QLabel()
+        title.setObjectName("featureTitle")
+        title.setWordWrap(True)
 
-        shadow.setOffset(
-            0,
-            vertical_offset
-        )
+        text = QLabel()
+        text.setObjectName("featureDescription")
+        text.setWordWrap(True)
 
-        shadow.setColor(
-            QColor(
-                15,
-                23,
-                42,
-                28
-            )
-        )
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(22, 20, 22, 20)
+        layout.setSpacing(8)
+        layout.addWidget(title)
+        layout.addWidget(text)
+        layout.addStretch()
 
-        widget.setGraphicsEffect(
-            shadow
-        )
+        return card, title, text
 
-    def set_user(
-        self,
-        full_name
-    ):
-        if full_name:
-            first_name = full_name.split()[0]
+    def t(self, key):
+        return get_text(self.current_language, key)
 
-            self.welcome_label.setText(
-                f"Welcome, {first_name}"
-            )
+    def set_language(self, language):
+        self.current_language = language
+        self.locale = QLocale(LOCALES[language])
+        self.sidebar.set_language(language)
+
+        texts = {
+            self.hero_eyebrow: "home_eyebrow",
+            self.hero_description: "home_description",
+            self.start_button: "start_check_in",
+            self.private_note: "home_private_note",
+            self.today_title: "today",
+            self.reminder_title: "wellbeing_reminders",
+            self.pause_title: "tip_pause_title",
+            self.pause_text: "tip_pause_text",
+            self.hydrate_title: "tip_hydrate_title",
+            self.hydrate_text: "tip_hydrate_text",
+            self.pattern_title: "tip_pattern_title",
+            self.pattern_text: "tip_pattern_text",
+        }
+
+        for widget, key in texts.items():
+            widget.setText(self.t(key))
+
+        self.start_button.setMinimumWidth(250 if language == "Tamil" else 210)
+        self.update_clock()
+        self.tamil_fonts()
+
+    def tamil_fonts(self):
+        tamil = self.current_language == "Tamil"
+
+        widgets = [
+            (self.hero_title, 24),
+            (self.hero_eyebrow, 9),
+            (self.hero_description, 10),
+            (self.start_button, 10),
+            (self.private_note, 9),
+            (self.today_title, 10),
+            (self.reminder_title, 15),
+            (self.pause_title, 11),
+            (self.pause_text, 9),
+            (self.hydrate_title, 11),
+            (self.hydrate_text, 9),
+            (self.pattern_title, 11),
+            (self.pattern_text, 9),
+            (self.welcome_label, 10),
+        ]
+
+        for widget, size in widgets:
+            widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+
+    def set_user(self, full_name):
+        self.first_name = full_name.split()[0] if full_name else ""
+        self.update_clock()
+
+    def update_clock(self):
+        now = QDateTime.currentDateTime()
+        hour = now.time().hour()
+
+        if hour < 12:
+            greeting = self.t("good_morning")
+        elif hour < 18:
+            greeting = self.t("good_afternoon")
         else:
-            self.welcome_label.setText(
-                "Welcome"
-            )
+            greeting = self.t("good_evening")
+
+        self.hero_title.setText(
+            f"{greeting}, {self.first_name}" if self.first_name else greeting
+        )
+
+        welcome = self.t("welcome")
+        self.welcome_label.setText(
+            f"{welcome}, {self.first_name}" if self.first_name else welcome
+        )
+
+        self.time_value.setText(now.time().toString("HH:mm"))
+        self.date_value.setText(
+            self.locale.toString(now.date(), "dddd, d MMMM yyyy")
+        )
