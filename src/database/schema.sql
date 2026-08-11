@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS check_ins (
     summary TEXT NOT NULL,
     explanation TEXT,
     recommendation TEXT,
-    recommendation_source TEXT,
     image_name TEXT,
 
     FOREIGN KEY (user_id)

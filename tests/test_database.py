@@ -62,8 +62,6 @@ def audio_result(score=60.0):
             "1. Take a short break.\n"
             "2. Drink some water.\n"
             "3. Rest after your shift.",
-        "recommendation_source":
-            "Qwen/Qwen2.5-1.5B-Instruct",
         "image_name": "wellbeing_mid.png",
         "blink_rate": None,
         "head_position": None,
@@ -91,8 +89,6 @@ def video_result(score=75.0):
             "1. Continue taking regular breaks.\n"
             "2. Stay hydrated.\n"
             "3. Make time to rest.",
-        "recommendation_source":
-            "Qwen/Qwen2.5-1.5B-Instruct",
         "image_name": "wellbeing_high.png",
         "blink_rate": 18.5,
         "head_position": "Centred",

@@ -1175,8 +1175,6 @@ class MultimodalPipeline:
                 "recommendation":
                     recommendation,
 
-                "recommendation_source":
-                    RECOMMENDATION_MODEL_ID,
             }
 
         finally:

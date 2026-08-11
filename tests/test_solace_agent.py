@@ -77,8 +77,6 @@ def sample_check_in(score=60.0):
             "Your signals suggest a moderate wellbeing range.",
         "recommendation":
             "Take a short break and rest after your shift.",
-        "recommendation_source":
-            "Qwen/Qwen2.5-1.5B-Instruct",
         "image_name": "wellbeing_mid.png",
         "blink_rate": None,
         "head_position": None,

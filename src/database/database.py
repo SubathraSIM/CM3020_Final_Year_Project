@@ -56,7 +56,6 @@ def create_database():
         add_columns(connection, "check_ins", {
             "explanation": "TEXT",
             "recommendation": "TEXT",
-            "recommendation_source": "TEXT",
             "image_name": "TEXT",
             "blink_rate": "REAL",
             "head_position": "TEXT",
@@ -174,7 +173,6 @@ def save_check_in(user_id, result):
                 summary,
                 explanation,
                 recommendation,
-                recommendation_source,
                 image_name,
                 blink_rate,
                 head_position,
@@ -182,7 +180,7 @@ def save_check_in(user_id, result):
                 disfluency_rate,
                 lexical_variety
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -196,7 +194,6 @@ def save_check_in(user_id, result):
                 result["phrase"],
                 result["explanation"],
                 result["recommendation"],
-                result["recommendation_source"],
                 result["image_name"],
                 result.get("blink_rate"),
                 result.get("head_position"),
@@ -317,7 +314,6 @@ def get_check_in_for_date(user_id, date_text):
                 summary,
                 explanation,
                 recommendation,
-                recommendation_source,
                 image_name,
                 blink_rate,
                 head_position,
