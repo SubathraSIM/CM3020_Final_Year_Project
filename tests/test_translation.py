@@ -123,3 +123,24 @@ def test_get_translated_text():
     )
 
     assert result == "Laman utama"
+
+# Test case 10: Check that a missing translation falls back to English text
+def test_get_text_fallback_to_english():
+    original_translations = (
+        translations.TRANSLATIONS
+    )
+
+    # Simulate translations being empty or a language missing its keys
+    translations.TRANSLATIONS = {}
+
+    result = translations.get_text(
+        "Malay",
+        "home"
+    )
+
+    translations.TRANSLATIONS = (
+        original_translations
+    )
+
+    assert result == "Home"
+    assert translations.get_text("Malay", "not_a_real_key") == "not_a_real_key"

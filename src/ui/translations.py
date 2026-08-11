@@ -149,7 +149,7 @@ def prepare_translations():
 
 
 def get_text(language, key):
-    return TRANSLATIONS[language][key]
+    return TRANSLATIONS.get(language, {}).get(key) or ENGLISH_TEXT.get(key, key)
 
 
 def translate_text(text, language):
