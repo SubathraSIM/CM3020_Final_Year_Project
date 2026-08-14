@@ -1280,6 +1280,9 @@ class CheckInPage(QWidget):
         result["baseline"] = baseline 
 
         save_check_in(self.user_id, result)
+        for f in (self.video_file, self.audio_file):
+            if f:
+                Path(f).unlink(missing_ok=True)
 
         self.populate_result(result)
         self.stack.setCurrentWidget(self.result_page)
