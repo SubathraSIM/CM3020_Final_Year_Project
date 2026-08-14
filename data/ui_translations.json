@@ -143,6 +143,9 @@
         "lower_text": "Your wellbeing score is lower than your previous check-in.",
         "steady_phrase": "Today feels steady",
         "steady_text": "Your wellbeing score is close to your previous check-in.",
+        "baseline_above": "Above your recent range.",
+        "baseline_below": "Below your recent range.",
+        "baseline_within": "Within your recent range.",
         "consent_window": "Disclaimer and consent",
         "consent_title": "Before you continue",
         "consent_subtitle": "Please read this information before using Solace.",
@@ -414,7 +417,10 @@
         "assistant_tool_date_check_in": "Tanggal pendaftaran",
         "assistant_tool_check_in_count": "Jumlah check-in",
         "assistant_tool_safety_support": "Sokongan keselamatan",
-        "assistant_tool_general": "Perbincangan umum"
+        "assistant_tool_general": "Perbincangan umum",
+        "baseline_above": "Lebih tinggi daripada jangkauan baru-baru ini.",
+        "baseline_below": "Di bawah jangkauan baru-baru ini.",
+        "baseline_within": "Dalam jangkauan baru-baru ini."
     },
     "Chinese": {
         "home": "家庭",
@@ -630,7 +636,10 @@
         "assistant_tool_date_check_in": "登记日期",
         "assistant_tool_check_in_count": "登记数量",
         "assistant_tool_safety_support": "安全支持",
-        "assistant_tool_general": "总谈话"
+        "assistant_tool_general": "总谈话",
+        "baseline_above": "超过你最近的范围.",
+        "baseline_below": "在你最近的范围下.",
+        "baseline_within": "在你最近的范围内."
     },
     "Tamil": {
         "home": "வீடு",
@@ -846,6 +855,9 @@
         "assistant_tool_date_check_in": "பதிவு தேதி",
         "assistant_tool_check_in_count": "பதிவு எண்ணிக்கை",
         "assistant_tool_safety_support": "பாதுகாப்பு ஆதரவு",
-        "assistant_tool_general": "பொதுவான உரையாடல்"
+        "assistant_tool_general": "பொதுவான உரையாடல்",
+        "baseline_above": "உங்கள் சமீபத்திய வரம்பை விட.",
+        "baseline_below": "உங்கள் சமீபத்திய வரம்பை கீழே.",
+        "baseline_within": "உங்கள் சமீபத்திய வரம்பில்."
     }
 }

@@ -19,9 +19,10 @@ from PySide6.QtWidgets import (
 )
 
 from src.ai.multimodal_pipeline import AnalysisWorker, TranscriptionWorker
-from src.database.database import get_recent_scores, save_check_in
+from src.database.database import get_recent_scores, get_previous_scores, save_check_in
 from src.ui.home_page import HoverSidebar
 from src.ui.translations import ENGLISH_TEXT, get_text
+from statistics import mean, pstdev
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -129,6 +130,10 @@ CHECKIN_TEXT = {
     "lower_text": "Your wellbeing score is lower than your previous check-in.",
     "steady_phrase": "Today feels steady",
     "steady_text": "Your wellbeing score is close to your previous check-in.",
+
+    "baseline_above": "Above your recent range.",
+    "baseline_below": "Below your recent range.",
+    "baseline_within": "Within your recent range.",
 }
 
 ENGLISH_TEXT.update(CHECKIN_TEXT)
@@ -375,6 +380,32 @@ class UploadDialog(QDialog):
             self.file_label.setText(Path(path).name)
             self.use_button.setEnabled(True)
 
+def classify_baseline(score, previous_scores, min_history=7):
+    """Classify a score against the user's personal baseline.
+    Returns a translation key, or None if there is not enough history."""
+
+    if len(previous_scores) < min_history:
+        return None
+
+    personal_mean = mean(previous_scores)
+    personal_sd = pstdev(previous_scores)
+
+    if personal_sd == 0:
+        if score > personal_mean:
+            return "baseline_above"
+
+        if score < personal_mean:
+            return "baseline_below"
+
+        return "baseline_within"
+
+    if score > personal_mean + personal_sd:
+        return "baseline_above"
+
+    if score < personal_mean - personal_sd:
+        return "baseline_below"
+
+    return "baseline_within"
 
 class CheckInPage(QWidget):
     home_requested = Signal()
@@ -1241,10 +1272,12 @@ class CheckInPage(QWidget):
         score = round(result["wellbeing_score"])
 
         phrase, explanation, image = self.result_text(score, previous_score)
+        baseline = self.baseline_status(score)
 
         result["phrase"] = phrase
         result["explanation"] = explanation
         result["image_name"] = image
+        result["baseline"] = baseline 
 
         save_check_in(self.user_id, result)
 
@@ -1287,7 +1320,13 @@ class CheckInPage(QWidget):
             keys = "steady_phrase", "steady_text", "wellbeing_mid.png"
 
         return self.t(keys[0]), self.t(keys[1]), keys[2]
+    
 
+    def baseline_status(self, score):
+        previous_scores = get_previous_scores(self.user_id, 7)
+        label = classify_baseline(score, previous_scores)
+        return self.t(label) if label else None
+        
     def populate_result(self, result):
         score = round(result["wellbeing_score"])
 
@@ -1297,7 +1336,16 @@ class CheckInPage(QWidget):
         )
 
         self.result_phrase.setText(result["phrase"])
-        self.result_explanation.setText(result["explanation"])
+        explanation_text = result["explanation"]
+        if result.get("baseline"):
+            self.result_explanation.setTextFormat(Qt.RichText)
+            self.result_explanation.setText(
+                f"{explanation_text}<br>"
+                f"Baseline level: <b>{result['baseline']}</b>"
+            )
+        else:
+            self.result_explanation.setTextFormat(Qt.PlainText)
+            self.result_explanation.setText(explanation_text)
 
         self.score.setValue(score)
         self.score.setFormat(f"{score} / 100")

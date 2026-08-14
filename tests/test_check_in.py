@@ -1,5 +1,5 @@
 from src.ui.check_in_page import CheckInPage
-
+from src.ui.check_in_page import classify_baseline
 
 # Simple helper used only to return the translation key
 class TestCheckIn:
@@ -129,3 +129,36 @@ def test_same_score_is_steady():
     assert phrase == "steady_phrase"
     assert explanation == "steady_text"
     assert image == "wellbeing_mid.png"
+
+# Test: not enough history returns None
+def test_baseline_not_enough_history():
+    scores = [50, 55, 60]  # fewer than 7
+    assert classify_baseline(70, scores) is None
+
+
+# Test: a score clearly above the recent range
+def test_baseline_above_range():
+    scores = [50, 52, 48, 51, 49, 50, 50]  # mean 50, small SD
+    assert classify_baseline(80, scores) == "baseline_above"
+
+
+# Test: a score clearly below the recent range
+def test_baseline_below_range():
+    scores = [50, 52, 48, 51, 49, 50, 50]
+    assert classify_baseline(20, scores) == "baseline_below"
+
+
+# Test: a score within the recent range
+def test_baseline_within_range():
+    scores = [50, 52, 48, 51, 49, 50, 50]
+    assert classify_baseline(50, scores) == "baseline_within"
+
+
+def test_baseline_zero_sd_above():
+    scores = [50, 50, 50, 50, 50, 50, 50]
+    assert classify_baseline(60, scores) == "baseline_above"
+
+
+def test_baseline_zero_sd_same():
+    scores = [50, 50, 50, 50, 50, 50, 50]
+    assert classify_baseline(50, scores) == "baseline_within"

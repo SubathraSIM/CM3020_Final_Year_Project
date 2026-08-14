@@ -224,6 +224,26 @@ def get_recent_scores(user_id, limit=7):
         for row in reversed(rows)
     ]
 
+def get_previous_scores(user_id, limit=30):
+    """Return the user's past wellbeing scores, oldest first,
+    for computing a personal baseline. Excludes nothing here —
+    the caller decides how to use them relative to the current check-in."""
+    with connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT wellbeing_score
+            FROM check_ins
+            WHERE user_id = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+            """,
+            (user_id, limit),
+        ).fetchall()
+
+    return [
+        float(row["wellbeing_score"])
+        for row in reversed(rows)
+    ]
 
 def get_check_in_count(user_id):
     with connect() as connection:
