@@ -15,7 +15,7 @@ from src.database.database import (
 from src.ui.translations import translate_text
 
 
-AGENT_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
+AGENT_MODEL_ID = "Qwen/Qwen3-1.7B"
 
 SUPPORTED_LANGUAGES = {
     "English",

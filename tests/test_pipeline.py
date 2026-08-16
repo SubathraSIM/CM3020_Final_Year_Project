@@ -245,6 +245,8 @@ def test_slow_speech_signal():
 
 
 # Test case 10: Check audio fusion uses 94 percent primary model weight
+# Test case 10: Check audio fusion uses median primary score
+# and additive supporting signals
 def test_audio_fusion():
     pipeline = MultimodalPipeline()
 
@@ -269,18 +271,20 @@ def test_audio_fusion():
         supporting_scores
     )
 
+    # Median of 0.40 and 0.60
     assert round(primary, 2) == 0.50
+
+    # Mean of supporting signals
     assert round(supporting, 2) == 0.40
 
-    assert round(
-        primary_weight,
-        2
-    ) == 0.94
+    # Three supporting signals use 6%,
+    # leaving 94% for the primary fusion.
+    assert primary_weight == 0.94
 
-    assert round(
-        strain,
-        3
-    ) == 0.494
+    # (0.50 * 0.94)
+    # + ((0.20 + 0.40 + 0.60) * 0.02)
+    # = 0.494
+    assert round(strain, 3) == 0.494
 
 
 # Test case 11: Check video fusion uses 90 percent primary model weight
@@ -288,9 +292,9 @@ def test_video_fusion():
     pipeline = MultimodalPipeline()
 
     primary_scores = [
-        0.30,
-        0.50,
-        0.70
+        0.10,
+        0.20,
+        0.90
     ]
 
     supporting_scores = [
@@ -311,18 +315,24 @@ def test_video_fusion():
         supporting_scores
     )
 
-    assert round(primary, 2) == 0.50
+    # Median is 0.20.
+    # Mean would be 0.40, so this proves
+    # median fusion is being used.
+    assert round(primary, 2) == 0.20
+
     assert round(supporting, 2) == 0.30
 
-    assert round(
-        primary_weight,
-        2
-    ) == 0.90
+    # Five supporting signals use 10%,
+    # leaving 90% for the primary fusion.
+    assert primary_weight == 0.90
 
-    assert round(
-        strain,
-        2
-    ) == 0.48
+    # Supporting contribution:
+    # (0.10 + 0.20 + 0.30 + 0.40 + 0.50) * 0.02
+    # = 0.03
+    #
+    # Final strain = (0.20 * 0.90) + 0.03
+    # = 0.21
+    assert round(strain, 2) == 0.21
 
 
 # Test case 12: Check fusion works when no supporting signals are supplied
@@ -350,7 +360,41 @@ def test_fusion_without_supporting_signals():
     assert primary_weight == 1.0
     assert round(strain, 2) == 0.50
 
+def test_fusion_maximum_strain():
+    pipeline = MultimodalPipeline()
 
+    primary_scores = [
+        1.0,
+        1.0,
+        1.0
+    ]
+
+    supporting_scores = [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+    ]
+
+    (
+        primary,
+        supporting,
+        strain,
+        primary_weight
+    ) = pipeline.fuse(
+        primary_scores,
+        supporting_scores
+    )
+
+    assert primary == 1.0
+    assert supporting == 1.0
+    assert primary_weight == 0.90
+
+    # (1.0 * 0.90) + (5 * 1.0 * 0.02)
+    # = 1.0
+    assert strain == 1.0
+    
 # Test case 13: Check the higher wellbeing score boundary
 def test_high_wellbeing_summary():
     pipeline = MultimodalPipeline()

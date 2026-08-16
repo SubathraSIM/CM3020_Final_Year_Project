@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import gc, math, re, subprocess, tempfile
 from pathlib import Path
-from statistics import mean
+from statistics import mean, median
 
 import cv2
 import imageio_ffmpeg
@@ -26,7 +26,7 @@ TEXT_MODEL_ID = "j-hartmann/emotion-english-roberta-large"
 AUDIO_MODEL_ID = "MERaLiON/MERaLiON-SER-v1"
 VISION_MODEL_ID = "mo-thecreator/vit-Facial-Expression-Recognition"
 WHISPER_MODEL_ID = "openai/whisper-small"
-RECOMMENDATION_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
+RECOMMENDATION_MODEL_ID = "Qwen/Qwen3-1.7B"
 
 WHISPER_LANGUAGES = {
     "English": "en",
@@ -744,35 +744,39 @@ class MultimodalPipeline:
         primary_scores,
         supporting_scores,
     ):
-        primary = mean(
+        # Median fusion for the primary AI models.
+        # For video: median of text, audio and vision.
+        # For audio-only: median of text and audio,
+        # which is equivalent to their average.
+        primary = median(
             primary_scores
         )
 
-        supporting_weight = (
-            len(supporting_scores)
-            * AUXILIARY_WEIGHT
-        )
-
-        primary_weight = (
-            1
-            - supporting_weight
-        )
-
-        strain = (
-            primary
-            * primary_weight
-            + sum(
-                score
-                * AUXILIARY_WEIGHT
-                for score
-                in supporting_scores
-            )
-        )
-
+        # Mean retained for reporting the overall
+        # supporting-signal level.
         supporting = (
             mean(supporting_scores)
             if supporting_scores
             else 0
+        )
+
+        # Each supporting signal receives 2% of the final score.
+        supporting_contribution = sum(
+            score * AUXILIARY_WEIGHT
+            for score in supporting_scores
+        )
+
+        # Remaining weight belongs to the primary AI-model fusion.
+        # Video: 5 supporting signals -> 90% primary.
+        # Audio: 3 supporting signals -> 94% primary.
+        primary_weight = (
+            1.0
+            - len(supporting_scores) * AUXILIARY_WEIGHT
+        )
+
+        strain = clamp(
+            primary * primary_weight
+            + supporting_contribution
         )
 
         return (
@@ -781,7 +785,6 @@ class MultimodalPipeline:
             strain,
             primary_weight,
         )
-
     # --------------------------------------------------
     # Video audio extraction
     # --------------------------------------------------
