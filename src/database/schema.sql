@@ -11,33 +11,25 @@ CREATE TABLE IF NOT EXISTS check_ins (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    input_type TEXT NOT NULL
-        CHECK (input_type IN ('audio', 'video')),
-
+    input_type TEXT NOT NULL CHECK (input_type IN ('audio', 'video')),
+    original_language TEXT NOT NULL DEFAULT 'English',
+    transcript_original TEXT NOT NULL,
     transcript TEXT NOT NULL,
-
     text_score REAL NOT NULL,
     audio_score REAL NOT NULL,
     vision_score REAL,
-
     strain_score REAL NOT NULL,
     wellbeing_score REAL NOT NULL,
-
     blink_rate REAL,
     head_position TEXT,
     speech_rate REAL NOT NULL,
     disfluency_rate REAL NOT NULL,
     lexical_variety REAL NOT NULL,
-
     summary TEXT NOT NULL,
     explanation TEXT,
     recommendation TEXT,
     image_name TEXT,
-
-    FOREIGN KEY (user_id)
-        REFERENCES users(id)
-        ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_check_ins_user_date

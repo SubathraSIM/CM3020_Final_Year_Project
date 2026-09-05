@@ -244,9 +244,8 @@ def test_slow_speech_signal():
     ) == 0.60
 
 
-# Test case 10: Check audio fusion uses 94 percent primary model weight
 # Test case 10: Check audio fusion uses median primary score
-# and additive supporting signals
+# with 0.4% allocated to each supporting signal
 def test_audio_fusion():
     pipeline = MultimodalPipeline()
 
@@ -277,17 +276,18 @@ def test_audio_fusion():
     # Mean of supporting signals
     assert round(supporting, 2) == 0.40
 
-    # Three supporting signals use 6%,
-    # leaving 94% for the primary fusion.
-    assert primary_weight == 0.94
+    # Three supporting signals use 1.2% in total,
+    # leaving 98.8% for the primary fusion.
+    assert primary_weight == 0.988
 
-    # (0.50 * 0.94)
-    # + ((0.20 + 0.40 + 0.60) * 0.02)
-    # = 0.494
-    assert round(strain, 3) == 0.494
+    # (0.50 * 0.988)
+    # + ((0.20 + 0.40 + 0.60) * 0.004)
+    # = 0.4988
+    assert round(strain, 4) == 0.4988
 
 
-# Test case 11: Check video fusion uses 90 percent primary model weight
+# Test case 11: Check video fusion uses median primary score
+# with 2% total supporting-signal contribution
 def test_video_fusion():
     pipeline = MultimodalPipeline()
 
@@ -316,23 +316,25 @@ def test_video_fusion():
     )
 
     # Median is 0.20.
-    # Mean would be 0.40, so this proves
+    # Mean would be 0.40, so this confirms
     # median fusion is being used.
     assert round(primary, 2) == 0.20
 
+    # Mean supporting-signal level
     assert round(supporting, 2) == 0.30
 
-    # Five supporting signals use 10%,
-    # leaving 90% for the primary fusion.
-    assert primary_weight == 0.90
+    # Five supporting signals use 2% in total,
+    # leaving 98% for the primary fusion.
+    assert primary_weight == 0.98
 
     # Supporting contribution:
-    # (0.10 + 0.20 + 0.30 + 0.40 + 0.50) * 0.02
-    # = 0.03
+    # (0.10 + 0.20 + 0.30 + 0.40 + 0.50) * 0.004
+    # = 0.006
     #
-    # Final strain = (0.20 * 0.90) + 0.03
-    # = 0.21
-    assert round(strain, 2) == 0.21
+    # Final strain:
+    # (0.20 * 0.98) + 0.006
+    # = 0.202
+    assert round(strain, 3) == 0.202
 
 
 # Test case 12: Check fusion works when no supporting signals are supplied
@@ -389,9 +391,13 @@ def test_fusion_maximum_strain():
 
     assert primary == 1.0
     assert supporting == 1.0
-    assert primary_weight == 0.90
 
-    # (1.0 * 0.90) + (5 * 1.0 * 0.02)
+    # Five supporting signals use 2% in total,
+    # leaving 98% for the primary fusion.
+    assert primary_weight == 0.98
+
+    # (1.0 * 0.98)
+    # + (5 * 1.0 * 0.004)
     # = 1.0
     assert strain == 1.0
     

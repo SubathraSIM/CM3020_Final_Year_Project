@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QFrame, QHBoxLayout,
+    QCheckBox, QDialog, QFrame, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QVBoxLayout,
 )
 
@@ -66,10 +66,11 @@ def heart_image(size):
 
 
 class ConsentDialog(QDialog):
-    def __init__(self, parent=None, initial_language="English"):
+    def __init__(self,parent=None,initial_language="English",view_only=False,):
         super().__init__(parent)
 
         self.selected_language = initial_language
+        self.view_only = view_only
 
         self.setModal(True)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
@@ -77,69 +78,29 @@ class ConsentDialog(QDialog):
         self.setFixedSize(680, 560)
 
         self.stack = QStackedWidget()
-        self.stack.addWidget(self.build_language_page())
         self.stack.addWidget(self.build_consent_page())
-
-        index = self.language_combo.findData(initial_language)
-        if index >= 0:
-            self.language_combo.setCurrentIndex(index)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.addWidget(self.stack)
-
-    def build_language_page(self):
-        card = QFrame()
-        card.setObjectName("consentCard")
-        card.setAttribute(Qt.WA_StyledBackground, True)
-
-        title = QLabel("Choose your language")
-        title.setObjectName("consentTitle")
-        title.setAlignment(Qt.AlignCenter)
-
-        note = QLabel("Choose the language you want to use throughout Solace.")
-        note.setObjectName("consentSubtitle")
-        note.setAlignment(Qt.AlignCenter)
-        note.setWordWrap(True)
-
-        later = QLabel("You can change this later in Settings.")
-        later.setObjectName("privacyNote")
-        later.setAlignment(Qt.AlignCenter)
-
-        self.language_combo = QComboBox()
-        self.language_combo.setFixedHeight(48)
-        self.language_combo.setCursor(Qt.PointingHandCursor)
-        self.language_combo.addItem("English", "English")
-        self.language_combo.addItem("Bahasa Melayu", "Malay")
-        self.language_combo.addItem("简体中文", "Chinese")
-        self.language_combo.addItem("தமிழ்", "Tamil")
-
-        next_button = QPushButton("Next")
-        next_button.setObjectName("primaryButton")
-        next_button.setFixedHeight(48)
-        next_button.setCursor(Qt.PointingHandCursor)
-        next_button.clicked.connect(self.show_consent)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(70, 55, 70, 55)
-        layout.setSpacing(16)
-        layout.addStretch()
-        layout.addWidget(heart_image(64), 0, Qt.AlignCenter)
-        layout.addWidget(title)
-        layout.addWidget(note)
-        layout.addSpacing(8)
-        layout.addWidget(self.language_combo)
-        layout.addWidget(later)
-        layout.addSpacing(4)
-        layout.addWidget(next_button)
-        layout.addStretch()
-
-        return card
+        self.show_consent()
 
     def build_consent_page(self):
         card = QFrame()
         card.setObjectName("consentCard")
         card.setAttribute(Qt.WA_StyledBackground, True)
+
+        self.close_button = QPushButton("✕")
+        self.close_button.setObjectName("consentCloseButton")
+        self.close_button.setFixedSize(36, 36)
+        self.close_button.setCursor(Qt.PointingHandCursor)
+        self.close_button.clicked.connect(self.accept)
+
+        close_row = QHBoxLayout()
+        close_row.addStretch()
+        close_row.addWidget(self.close_button)
+
+        self.close_button.setVisible(self.view_only)
 
         self.title = QLabel()
         self.title.setObjectName("consentTitle")
@@ -180,8 +141,10 @@ class ConsentDialog(QDialog):
         buttons.addWidget(self.agree)
 
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(46, 28, 46, 28)
+        layout.setContentsMargins(46, 18, 46, 28)
         layout.setSpacing(10)
+
+        layout.addLayout(close_row)
         layout.addWidget(heart_image(52), 0, Qt.AlignCenter)
         layout.addWidget(self.title)
         layout.addWidget(self.subtitle)
@@ -190,14 +153,17 @@ class ConsentDialog(QDialog):
         layout.addSpacing(4)
         layout.addLayout(buttons)
 
+        if self.view_only:
+            self.checkbox.hide()
+            self.decline.hide()
+            self.agree.hide()
+
         return card
 
     def t(self, key):
         return get_text(self.selected_language, key)
 
     def show_consent(self):
-        self.selected_language = self.language_combo.currentData()
-
         self.setWindowTitle(self.t("consent_window"))
         self.title.setText(self.t("consent_title"))
         self.subtitle.setText(self.t("consent_subtitle"))
@@ -213,7 +179,7 @@ class ConsentDialog(QDialog):
         )
 
         self.tamil_fonts()
-        self.stack.setCurrentIndex(1)
+        self.stack.setCurrentIndex(0)
 
     def tamil_fonts(self):
         tamil = self.selected_language == "Tamil"

@@ -381,9 +381,6 @@ class UploadDialog(QDialog):
             self.use_button.setEnabled(True)
 
 def classify_baseline(score, previous_scores, min_history=7):
-    """Classify a score against the user's personal baseline.
-    Returns a translation key, or None if there is not enough history."""
-
     if len(previous_scores) < min_history:
         return None
 
@@ -1271,13 +1268,17 @@ class CheckInPage(QWidget):
         previous_score = previous[-1] if previous else None
         score = round(result["wellbeing_score"])
 
-        phrase, explanation, image = self.result_text(score, previous_score)
+        phrase_key, explanation_key, image = self.result_text(score, previous_score)
         baseline = self.baseline_status(score)
 
-        result["phrase"] = phrase
-        result["explanation"] = explanation
+        result["phrase"] = self.t(phrase_key)
+        result["explanation"] = self.t(explanation_key)
+
+        result["phrase_english"] = ENGLISH_TEXT[phrase_key]
+        result["explanation_english"] = ENGLISH_TEXT[explanation_key]
+
         result["image_name"] = image
-        result["baseline"] = baseline 
+        result["baseline"] = baseline
 
         save_check_in(self.user_id, result)
         for f in (self.video_file, self.audio_file):
@@ -1322,7 +1323,7 @@ class CheckInPage(QWidget):
         else:
             keys = "steady_phrase", "steady_text", "wellbeing_mid.png"
 
-        return self.t(keys[0]), self.t(keys[1]), keys[2]
+        return keys[0], keys[1], keys[2]
     
 
     def baseline_status(self, score):

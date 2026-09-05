@@ -20,7 +20,23 @@ from transformers import (
 )
 
 from src.ui.translations import translate_text
+import sys as _sys
+import torch.nn.functional as _F
+from torchvision import transforms as _transforms
 
+_DDAMFN_DIR = r"C:\Users\Subathra\OneDrive\Desktop\Models\DDAMFN\DDAMFN++"
+_DDAMFN_CKPT = r"C:\Users\Subathra\OneDrive\Desktop\Models\DDAMFN\DDAMFN++\checkpoints_ver2.0\affecnet7_epoch19_acc0.671.pth"
+if _DDAMFN_DIR not in _sys.path:
+    _sys.path.insert(0, _DDAMFN_DIR)
+from networks.DDAM import DDAMNet as _DDAMNet
+
+# DDAMFN index order: 0 neutral,1 happy,2 sad,3 surprise,4 fear,5 disgust,6 anger
+_DDAMFN_NEG = [6, 4, 2, 5]   # anger, fear, sadness, disgust
+_DDAMFN_TF = _transforms.Compose([
+    _transforms.Resize((112, 112)),
+    _transforms.ToTensor(),
+    _transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
 TEXT_MODEL_ID = "j-hartmann/emotion-english-roberta-large"
 AUDIO_MODEL_ID = "MERaLiON/MERaLiON-SER-v1"
@@ -75,7 +91,7 @@ FILLERS = {
 }
 
 VIDEO_FRAME_COUNT = 8
-AUXILIARY_WEIGHT = 0.02
+AUXILIARY_WEIGHT = 0.004
 
 
 def clamp(value):
@@ -163,7 +179,18 @@ class MultimodalPipeline:
                 top_k=None,
             )
         return self.vision_model
-
+    
+    def load_ddamfn(self):
+        if getattr(self, "ddamfn_model", None) is None:
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            model = _DDAMNet(num_class=7, num_head=2, pretrained=False)
+            model.load_state_dict(
+                torch.load(_DDAMFN_CKPT, map_location=device)["model_state_dict"]
+            )
+            model.to(device).eval()
+            self.ddamfn_model = model
+            self.ddamfn_device = device
+        return self.ddamfn_model
     def load_qwen(self):
         if self.qwen is None:
             self.qwen = hf_pipeline(
@@ -294,21 +321,26 @@ class MultimodalPipeline:
     # --------------------------------------------------
 
     def vision_score(self, video_path):
-        frames = self.sample_faces(video_path)
+            frames = self.sample_faces(video_path)
 
-        if not frames:
-            raise RuntimeError(
-                "No face detected in the video."
-            )
+            if not frames:
+                raise RuntimeError(
+                    "No face detected in the video."
+                )
 
-        model = self.load_vision_model()
+            model = self.load_ddamfn()
 
-        return mean(
-            negative_score(
-                model(image, top_k=None)
-            )
-            for image in frames
-        )
+            scores = []
+            with torch.inference_mode():
+                for image in frames:
+                    tensor = _DDAMFN_TF(image).unsqueeze(0).to(self.ddamfn_device)
+                    out, _, _ = model(tensor)
+                    probs = _F.softmax(out, dim=1)[0]
+                    scores.append(
+                        float(sum(probs[i] for i in _DDAMFN_NEG))
+                    )
+
+            return mean(scores)
 
     def sample_faces(self, video_path):
         capture = cv2.VideoCapture(video_path)
@@ -739,52 +771,17 @@ class MultimodalPipeline:
     # Fusion
     # --------------------------------------------------
 
-    def fuse(
-        self,
-        primary_scores,
-        supporting_scores,
-    ):
-        # Median fusion for the primary AI models.
-        # For video: median of text, audio and vision.
-        # For audio-only: median of text and audio,
-        # which is equivalent to their average.
-        primary = median(
-            primary_scores
-        )
-
+    def fuse(self, primary_scores, supporting_scores,):
+        # Median fusion for the primary AI models
+        primary = median(primary_scores)
         # Mean retained for reporting the overall
-        # supporting-signal level.
-        supporting = (
-            mean(supporting_scores)
-            if supporting_scores
-            else 0
-        )
-
+        supporting = (mean(supporting_scores) if supporting_scores else 0)
         # Each supporting signal receives 2% of the final score.
-        supporting_contribution = sum(
-            score * AUXILIARY_WEIGHT
-            for score in supporting_scores
-        )
-
+        supporting_contribution = sum(score * AUXILIARY_WEIGHT for score in supporting_scores)
         # Remaining weight belongs to the primary AI-model fusion.
-        # Video: 5 supporting signals -> 90% primary.
-        # Audio: 3 supporting signals -> 94% primary.
-        primary_weight = (
-            1.0
-            - len(supporting_scores) * AUXILIARY_WEIGHT
-        )
-
-        strain = clamp(
-            primary * primary_weight
-            + supporting_contribution
-        )
-
-        return (
-            primary,
-            supporting,
-            strain,
-            primary_weight,
-        )
+        primary_weight = (1.0 - len(supporting_scores) * AUXILIARY_WEIGHT)
+        strain = clamp(primary * primary_weight + supporting_contribution)
+        return (primary,supporting, strain, primary_weight)
     # --------------------------------------------------
     # Video audio extraction
     # --------------------------------------------------
@@ -881,312 +878,116 @@ class MultimodalPipeline:
             },
         ]
 
-        result = generator(
+        prompt = generator.tokenizer.apply_chat_template(
             messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=False
+        )
+
+        english = generator(
+            prompt,
             max_new_tokens=180,
             do_sample=False,
-            pad_token_id=
-                generator.tokenizer
-                .eos_token_id,
-        )[0]["generated_text"]
-
-        english = (
-            result[-1]["content"]
-            .strip()
-        )
+            return_full_text=False,
+            pad_token_id=generator.tokenizer.eos_token_id,
+        )[0]["generated_text"].strip()
 
         # Qwen is released before NLLB is loaded.
         self.release_qwen()
 
-        return translate_text(
-            english,
-            language_name,
-        )
+        translated = translate_text(english, language_name)
+        return english, translated
 
     # --------------------------------------------------
     # Full analysis
     # --------------------------------------------------
 
-    def analyse(
-        self,
-        recording_path,
-        recording_type,
-        progress,
-        transcript=None,
-        *,
-        language_name="English",
-        trend=(
-            "No previous check-in "
-            "trend is available."
-        ),
-    ):
+    def analyse(self, recording_path, recording_type, progress, transcript=None, *, language_name="English",trend=( "No previous check-in trend is available."),):
         temporary_audio = None
-
         try:
             if recording_type == "video":
-                progress(
-                    "processing_extract_audio"
-                )
-
-                temporary_audio = (
-                    self.extract_audio(
-                        recording_path
-                    )
-                )
-
-                audio_path = (
-                    temporary_audio
-                )
-
+                progress("processing_extract_audio")
+                temporary_audio = (self.extract_audio(recording_path))
+                audio_path = (temporary_audio)
             else:
-                audio_path = (
-                    recording_path
-                )
-
+                audio_path = (recording_path)
             if not transcript:
-                progress(
-                    "processing_transcription"
-                )
-
-                transcript = self.transcribe(
-                    audio_path,
-                    language_name,
-                )
-
+                progress("processing_transcription")
+                transcript = self.transcribe(audio_path,language_name,)
             # RoBERTa and Qwen always receive English.
             progress("processing_text")
-
             if language_name == "English":
                 english_text = transcript
-
             else:
-                english_text = (
-                    self.translate_to_english(
-                        audio_path,
-                        language_name,
-                    )
-                )
-
-            text = self.text_score(
-                english_text
-            )
-
+                english_text = (self.translate_to_english(audio_path,language_name))
+            text = self.text_score(english_text)
             self.release_whisper()
-
             progress("processing_audio")
-
-            audio = self.audio_score(
-                audio_path
-            )
-
-            primary_scores = [
-                text,
-                audio,
-            ]
-
+            audio = self.audio_score(audio_path)
+            primary_scores = [text, audio]
             vision = None
             visual = {}
 
             if recording_type == "video":
-                progress(
-                    "processing_vision"
-                )
-
-                vision = self.vision_score(
-                    recording_path
-                )
-
-                primary_scores.append(
-                    vision
-                )
-
-                progress(
-                    "processing_signals"
-                )
-
-                visual = (
-                    self.visual_signals(
-                        recording_path
-                    )
-                )
-
+                progress("processing_vision")
+                vision = self.vision_score(recording_path)
+                primary_scores.append(vision)
+                progress("processing_signals")
+                visual = (self.visual_signals(recording_path))
             else:
-                progress(
-                    "processing_signals"
-                )
-
-            speech = self.speech_signals(
-                transcript,
-                audio_path,
-                language_name,
-            )
-
-            supporting = [
-                speech["speech_signal"],
-                speech["disfluency_signal"],
-                speech["lexical_signal"],
-            ]
-
+                progress("processing_signals")
+            speech = self.speech_signals(transcript, audio_path, language_name,)
+            supporting = [speech["speech_signal"], speech["disfluency_signal"],speech["lexical_signal"]]
             if recording_type == "video":
-                supporting += [
-                    visual["blink_signal"],
-                    visual["head_signal"],
-                ]
-
-            progress(
-                "processing_fusion"
-            )
-
-            (
-                primary_strain,
-                supporting_strain,
-                strain,
-                primary_weight,
-            ) = self.fuse(
-                primary_scores,
-                supporting,
-            )
-
-            strain_score = (
-                strain * 100
-            )
-
-            wellbeing_score = (
-                100 - strain_score
-            )
-
-            phrase, explanation = (
-                self.summary(
-                    wellbeing_score
-                )
-            )
-
+                supporting += [visual["blink_signal"], visual["head_signal"]]
+            progress("processing_fusion")
+            (primary_strain, supporting_strain, strain,primary_weight) = self.fuse(primary_scores, supporting)
+            strain_score = (strain * 100)
+            wellbeing_score = (100 - strain_score)
+            phrase, explanation = (self.summary(wellbeing_score))
             self.release_analysis_models()
-
-            progress(
-                "processing_recommendation"
+            progress("processing_recommendation")
+            recommendation_english, recommendation = self.recommendation(
+                english_text,
+                wellbeing_score,
+                phrase,
+                language_name,
+                trend,
             )
-
-            recommendation = (
-                self.recommendation(
-                    english_text,
-                    wellbeing_score,
-                    phrase,
-                    language_name,
-                    trend,
-                )
-            )
-
             return {
-                "recording_type":
-                    recording_type,
-
-                "language":
-                    language_name,
-
-                "transcript":
-                    transcript,
-
-                "text_score":
-                    round(
-                        text * 100,
-                        2,
-                    ),
-
-                "audio_score":
-                    round(
-                        audio * 100,
-                        2,
-                    ),
-
-                "vision_score":
-                    (
-                        round(
-                            vision * 100,
-                            2,
-                        )
+                "recording_type": recording_type,
+                "language": language_name,
+                "transcript": transcript,
+                "transcript_english": english_text,
+                "text_score": round(text * 100, 2),
+                "audio_score":round(audio * 100, 2),
+                "vision_score":(round(vision * 100, 2)
                         if vision
                         is not None
                         else None
                     ),
 
                 # Five supporting signals
-                "blink_rate":
-                    visual.get(
-                        "blink_rate"
-                    ),
-
-                "head_position":
-                    visual.get(
-                        "head_position"
-                    ),
-
-                "speech_rate":
-                    speech[
-                        "speech_rate"
-                    ],
-
-                "disfluency_rate":
-                    speech[
-                        "disfluency_rate"
-                    ],
-
-                "lexical_variety":
-                    speech[
-                        "lexical_variety"
-                    ],
-
-                "primary_strain_score":
-                    round(
-                        primary_strain
-                        * 100,
-                        2,
-                    ),
-
-                "auxiliary_strain_score":
-                    round(
-                        supporting_strain
-                        * 100,
-                        2,
-                    ),
-
-                "strain_score":
-                    round(
-                        strain_score,
-                        2,
-                    ),
-
-                "wellbeing_score":
-                    round(
-                        wellbeing_score,
-                        2,
-                    ),
-
-                "primary_weight":
-                    round(
-                        primary_weight
-                        * 100,
-                        2,
-                    ),
-
-                "phrase":
-                    phrase,
-
-                "explanation":
-                    explanation,
-
-                "recommendation":
-                    recommendation,
-
+                "blink_rate": visual.get( "blink_rate"),
+                "head_position":visual.get( "head_position"),
+                "speech_rate": speech["speech_rate"],
+                "disfluency_rate":speech[ "disfluency_rate"],
+                "lexical_variety":speech["lexical_variety"],
+                "primary_strain_score":round(primary_strain* 100, 2),
+                "auxiliary_strain_score":round(supporting_strain* 100,2),
+                "strain_score":round(strain_score, 2),
+                "wellbeing_score": round(wellbeing_score,2),
+                "primary_weight": round(primary_weight * 100, 2),
+                "phrase": phrase,
+                "explanation": explanation,
+                "recommendation": recommendation,
+                "recommendation_english": recommendation_english,
             }
 
         finally:
             if temporary_audio:
-                Path(
-                    temporary_audio
-                ).unlink(
-                    missing_ok=True
-                )
+                Path(temporary_audio).unlink(missing_ok=True)
 
     @staticmethod
     def summary(score):

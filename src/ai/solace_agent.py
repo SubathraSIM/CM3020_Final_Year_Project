@@ -3,6 +3,7 @@ import json
 import re
 from datetime import date
 
+from msgpack import ext
 import torch
 from transformers import pipeline as hf_pipeline
 
@@ -292,57 +293,23 @@ class SolaceAgent:
 
     @staticmethod
     def parse_decision(text):
-        match = re.search(
-            r"\{.*?\}",
-            text,
-            flags=re.DOTALL,
-        )
-
+        match = re.search(r"\{.*?\}", text, flags=re.DOTALL)
         if not match:
-            return {
-                "tool": "solace_help",
-                "date": "",
-            }
+            return {"tool": "solace_help","date": ""}
 
         try:
-            decision = json.loads(
-                match.group(0)
-            )
+            decision = json.loads(match.group(0))
 
         except json.JSONDecodeError:
-            return {
-                "tool": "solace_help",
-                "date": "",
-            }
-
-        tool = decision.get(
-            "tool",
-            "",
-        )
-
-        date_text = str(
-            decision.get(
-                "date",
-                "",
-            )
-        ).strip()
-
+            return {"tool": "solace_help","date": "" }
+        tool = decision.get("tool","")
+        date_text = str(decision.get("date","")).strip()
         if tool not in TOOL_NAMES:
             tool = "solace_help"
-
-        if (
-            tool == "date_check_in"
-            and not re.fullmatch(
-                r"\d{4}-\d{2}-\d{2}",
-                date_text,
-            )
-        ):
+        if (tool == "date_check_in" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_text)):
             date_text = ""
 
-        return {
-            "tool": tool,
-            "date": date_text,
-        }
+        return {"tool": tool, "date": date_text}
 
     # --------------------------------------------------
     # Agent chooses a tool
@@ -608,7 +575,7 @@ class SolaceAgent:
                 "For urgent mental-health concerns, "
                 "seek help from a qualified "
                 "healthcare professional."
-            ),
+            )
         }
 
     # --------------------------------------------------
