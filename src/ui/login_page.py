@@ -1,3 +1,4 @@
+from src.ui.account_widgets import PasswordEdit
 import math
 from pathlib import Path
 
@@ -7,6 +8,8 @@ from PySide6.QtWidgets import (
     QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QWidget,
 )
+
+from src.ui.ui_components import GardenArtwork, FloatCard
 
 from src.ui.translations import ENGLISH_TEXT, get_text
 
@@ -35,108 +38,23 @@ LOGIN_TEXT = {
 ENGLISH_TEXT.update(LOGIN_TEXT)
 
 
-class EcgMonitor(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.phase = 0
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.animate)
-        self.timer.start(35)
-
-    def animate(self):
-        self.phase = (self.phase + 3) % max(1, self.width())
-        self.update()
-
-    def paintEvent(self, event):
-        w, h = self.width(), self.height()
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(self.rect(), QColor("#05080B"))
-
-        grid = QColor("#38BDF8")
-        grid.setAlpha(20)
-        painter.setPen(QPen(grid, 1))
-
-        for x in range(0, w, 28):
-            painter.drawLine(x, 0, x, h)
-
-        for y in range(0, h, 28):
-            painter.drawLine(0, y, w, y)
-
-        middle = h / 2
-        points = []
-
-        for x in range(0, w + 3, 3):
-            position = (x % 150) / 150
-            value = 0
-
-            if 0.28 < position < 0.32:
-                value = -0.15
-            elif 0.32 <= position < 0.36:
-                value = 1
-            elif 0.36 <= position < 0.41:
-                value = -0.45
-            elif 0.48 <= position < 0.60:
-                value = 0.18 * math.sin((position - 0.48) / 0.12 * math.pi)
-
-            points.append(QPointF(x, middle - value * h * 0.28))
-
-        painter.setPen(QPen(QColor(255, 255, 255, 45), 2))
-        painter.drawPolyline(QPolygonF(points))
-
-        bright = [
-            point for point in points
-            if self.phase - 70 <= point.x() <= self.phase
-        ]
-
-        if len(bright) > 1:
-            painter.setPen(QPen(QColor("#38BDF8"), 3))
-            painter.drawPolyline(QPolygonF(bright))
 
 
 class BrandPanel(QFrame):
     def __init__(self):
         super().__init__()
-
-        self.setObjectName("brandPanel")
+        self.setObjectName('brandPanel')
         self.setAttribute(Qt.WA_StyledBackground, True)
-
-        self.ecg = EcgMonitor(self)
-
-        heart = QLabel()
-        heart.setFixedSize(76, 76)
-        heart.setAlignment(Qt.AlignCenter)
-        heart.setPixmap(
-            QPixmap(str(IMAGES / "heart.png")).scaled(
-                64, 64,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation,
-            )
-        )
-
-        name = QLabel("Solace")
-        name.setObjectName("brandName")
-        name.setAlignment(Qt.AlignCenter)
-
-        self.tagline = QLabel()
-        self.tagline.setObjectName("brandTagline")
-        self.tagline.setAlignment(Qt.AlignCenter)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(40, 40, 40, 40)
-        layout.addStretch()
-        layout.addWidget(heart, 0, Qt.AlignCenter)
-        layout.addWidget(name)
-        layout.addWidget(self.tagline)
-        layout.addStretch()
+        self.ecg = GardenArtwork(self)
+        name = QLabel('solace.'); name.setObjectName('brandName')
+        self.tagline = QLabel(); self.tagline.setObjectName('brandTagline'); self.tagline.setWordWrap(True)
+        layout = QVBoxLayout(self); layout.setContentsMargins(34,38,34,38)
+        layout.addWidget(name); layout.addWidget(self.tagline); layout.addStretch()
 
     def set_language(self, language):
         self.tagline.setText(get_text(language, "brand_tagline"))
         self.tagline.setStyleSheet(
-            "font-size:9px;" if language == "Tamil" else ""
+            "font-size:12px;" if language == "Tamil" else ""
         )
 
     def resizeEvent(self, event):
@@ -171,7 +89,7 @@ class LoginPage(QWidget):
         card = QFrame()
         card.setObjectName("appCard")
         card.setAttribute(Qt.WA_StyledBackground, True)
-        card.setFixedSize(940, 560)
+        card.setFixedSize(940, 630)
 
         self.brand = BrandPanel()
         form = self.build_form()
@@ -182,9 +100,11 @@ class LoginPage(QWidget):
         card_layout.addWidget(self.brand, 47)
         card_layout.addWidget(form, 53)
 
+        self.card_host = FloatCard(card)
+
         row = QHBoxLayout()
         row.addStretch()
-        row.addWidget(card)
+        row.addWidget(self.card_host)
         row.addStretch()
 
         language_row = QHBoxLayout()
@@ -193,7 +113,7 @@ class LoginPage(QWidget):
         language_row.addWidget(self.language_combo)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 50, 60, 30)
+        layout.setContentsMargins(24, 24, 24, 20)
         layout.addStretch()
         layout.addLayout(row)
         layout.addStretch()
@@ -224,13 +144,15 @@ class LoginPage(QWidget):
 
         self.username_input = QLineEdit()
         self.username_input.setFixedHeight(50)
+        self.username_label.setBuddy(self.username_input)
 
         self.password_label = QLabel()
         self.password_label.setObjectName("fieldLabel")
 
-        self.password_input = QLineEdit()
+        self.password_input = PasswordEdit()
         self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.setFixedHeight(50)
+        self.password_label.setBuddy(self.password_input)
 
         self.login_button = QPushButton()
         self.login_button.setObjectName("primaryButton")
@@ -262,7 +184,7 @@ class LoginPage(QWidget):
         divider.addWidget(right_line, 1)
 
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(56, 38, 56, 38)
+        layout.setContentsMargins(44, 30, 44, 30)
         layout.addStretch()
         layout.addWidget(self.heading)
         layout.addSpacing(6)
@@ -303,7 +225,7 @@ class LoginPage(QWidget):
             self.language_combo.currentText()
         )
         self.language_combo.setFixedWidth(
-            max(100, min(170, text_width + 50))
+            max(140, text_width + 76)
         )
 
     def t(self, key):
@@ -345,9 +267,13 @@ class LoginPage(QWidget):
         ]
 
         for widget, size in widgets:
-            widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+            widget.setStyleSheet(f"font-size:{max(size, 12)}px;" if tamil else "")
 
         self.resize_language_combo()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.card_host.play()
 
     def show_status(self, message, status_type):
         icon = "✓" if status_type == "success" else "!"

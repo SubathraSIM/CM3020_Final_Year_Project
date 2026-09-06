@@ -1,3 +1,8 @@
+from src.ui.account_widgets import AvatarButton, PasswordEdit
+from src.ui.settings_page import DeleteAccountDialog, LogoutDialog
+from src.database.database import create_database, get_user_profile, update_user_profile, delete_user
+from PySide6.QtWidgets import QMessageBox
+from pathlib import Path
 from PySide6.QtWidgets import (
     QDialog,
     QMainWindow,
@@ -37,6 +42,12 @@ class MainWindow(QMainWindow):
             720,
         )
 
+        theme = Path(__file__).with_name("styles.css").read_text(encoding="utf-8")
+        image_directory = (Path(__file__).resolve().parents[1] / "images").as_posix()
+        self.setStyleSheet(theme.replace("__SOLACE_IMAGES__", image_directory))
+        self.showMaximized()
+
+        create_database()
         self.current_user = None
         self.pending_username = ""
         self.current_language = "English"
@@ -69,6 +80,11 @@ class MainWindow(QMainWindow):
         )
 
         self.connect_pages()
+        self.settings_page.privacy_requested.connect(self.view_privacy)
+        self.settings_page.delete_account_requested.connect(self.confirm_delete_account)
+        self.settings_page.profile_panel.save_requested.connect(self.save_profile)
+        for avatar in self.findChildren(AvatarButton):
+            avatar.clicked.connect(self.show_profile)
 
     # --------------------------------------------------
     # Page connections
@@ -292,6 +308,18 @@ class MainWindow(QMainWindow):
         )
 
     def show_settings_page(self):
+        if self.current_user is None:
+            return
+        try:
+            profile=get_user_profile(self.current_user["id"])
+            panel=self.settings_page.profile_panel
+            if profile:
+                if panel.loaded_user_id!=profile["id"] or not panel.is_dirty:
+                    panel.set_profile(profile)
+                self.settings_page.profile_panel.save_button.setEnabled(True)
+        except Exception:
+            self.settings_page.profile_panel.status.setText(self.settings_page.t("profile_load_failed"))
+            self.settings_page.profile_panel.save_button.setEnabled(False)
         self.settings_page.set_language(
             self.current_language
         )
@@ -372,8 +400,7 @@ class MainWindow(QMainWindow):
         )
 
         if (
-            not full_name
-            or not username
+            not username
             or not password
             or not confirm
         ):
@@ -409,7 +436,7 @@ class MainWindow(QMainWindow):
             return
 
         if not create_user(
-            full_name,
+            full_name or username,
             username,
             password,
         ):
@@ -506,6 +533,7 @@ class MainWindow(QMainWindow):
             return
 
         self.current_user = user
+        self.refresh_avatars()
 
         page.clear_password()
 
@@ -582,7 +610,16 @@ class MainWindow(QMainWindow):
     # --------------------------------------------------
 
     def logout_user(self):
+        if self.account_busy():
+            QMessageBox.information(self, "Solace", self.settings_page.t("account_busy"))
+            return
+        if LogoutDialog(self.current_language, self).exec() != QDialog.Accepted:
+            return
+        if not self.check_in_page.reset_page():
+            return
+        self.settings_page.profile_panel.set_profile({})
         self.current_user = None
+        self.refresh_avatars()
 
         self.login_page.username_input.clear()
         self.login_page.clear_password()
@@ -612,3 +649,73 @@ class MainWindow(QMainWindow):
         )
 
         self.login_page.username_input.setFocus()
+
+    def refresh_avatars(self):
+        username = self.current_user['username'] if self.current_user else ''
+        for avatar in self.findChildren(AvatarButton):
+            avatar.set_identity(username)
+
+    def show_profile(self):
+        self.show_settings_page()
+        self.settings_page.account_tabs.setCurrentIndex(0)
+
+    def view_privacy(self):
+        ConsentDialog(self, self.current_language, view_only=True).exec()
+
+    def account_busy(self):
+        p=self.check_in_page
+        return (p.video_recording or p.audio_recording
+                or (p.analysis_worker is not None and p.analysis_worker.isRunning())
+                or (p.transcription_worker is not None and p.transcription_worker.isRunning())
+                or self.assistant_page.worker_running())
+
+    def save_profile(self, values):
+        panel=self.settings_page.profile_panel
+        if self.current_user is None:
+            return
+        if self.account_busy():
+            panel.status.setText(self.settings_page.t('account_busy'))
+            return
+        panel.save_button.setEnabled(False)
+        try:
+            user=update_user_profile(self.current_user['id'], **values)
+            self.current_user.update(user)
+            panel.set_profile(user)
+            self.home_page.set_user(user['full_name'])
+            self.refresh_avatars()
+            panel.status.setText(self.settings_page.t('profile_saved'))
+        except ValueError as error:
+            panel.status.setText(self.settings_page.t(str(error)))
+        except Exception:
+            panel.status.setText(self.settings_page.t('profile_failed'))
+        finally:
+            panel.clear_sensitive()
+            panel.save_button.setEnabled(True)
+
+    def confirm_delete_account(self):
+        if self.current_user is None:
+            return
+        if self.account_busy():
+            QMessageBox.information(self, 'Solace', self.settings_page.t('account_busy'))
+            return
+        dialog=DeleteAccountDialog(self.current_language,self)
+        if dialog.exec()!=QDialog.Accepted:
+            return
+        try:
+            deleted=delete_user(self.current_user['id'])
+        except Exception:
+            deleted=False
+        if not deleted:
+            QMessageBox.warning(self,'Solace',self.settings_page.t('delete_failed'))
+            return
+        self.check_in_page.reset_page()
+        self.logout_user()
+
+    def closeEvent(self, event):
+        if self.account_busy():
+            QMessageBox.information(self, 'Solace', self.settings_page.t('account_busy'))
+            event.ignore()
+            return
+        self.check_in_page.reset_page()
+        self.settings_page.profile_panel.clear_sensitive()
+        super().closeEvent(event)

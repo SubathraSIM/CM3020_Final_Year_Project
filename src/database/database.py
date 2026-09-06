@@ -31,7 +31,7 @@ def create_database():
     DATABASE_FOLDER.mkdir(parents=True, exist_ok=True)
     with connect() as connection:
         connection.executescript(SCHEMA_PATH.read_text(encoding='utf-8'))
-        add_columns(connection, 'users', {'consent_accepted': 'INTEGER NOT NULL DEFAULT 0', 'consent_accepted_at': 'TEXT'})
+        add_columns(connection, 'users', {'consent_accepted': 'INTEGER NOT NULL DEFAULT 0', 'consent_accepted_at': 'TEXT', 'email': "TEXT NOT NULL DEFAULT ''", 'profession': "TEXT NOT NULL DEFAULT ''", 'address': "TEXT NOT NULL DEFAULT ''"})
         add_columns(connection, 'check_ins', {'original_language': "TEXT NOT NULL DEFAULT 'English'", 'transcript_original': 'TEXT', 'explanation': 'TEXT', 'recommendation': 'TEXT', 'image_name': 'TEXT', 'blink_rate': 'REAL', 'head_position': 'TEXT', 'speech_rate': 'REAL', 'disfluency_rate': 'REAL', 'lexical_variety': 'REAL'})
     return DATABASE_PATH
 
@@ -113,3 +113,39 @@ def delete_user(user_id):
     with connect() as connection:
         cursor = connection.execute('\n            DELETE FROM users\n            WHERE id = ?\n            ', (user_id,))
         return cursor.rowcount == 1
+
+def get_user_profile(user_id):
+    with connect() as connection:
+        row = connection.execute(
+            "SELECT id, full_name, username, email, profession, address, consent_accepted FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def update_user_profile(user_id, username, full_name='', email='', profession='', address='',
+                        current_password='', new_password=''):
+    import re
+    username = username.strip()
+    if not username:
+        raise ValueError('profile_username_required')
+    if new_password and not (len(new_password) >= 8 and re.search(r'[A-Z]', new_password)
+            and re.search(r'[a-z]', new_password) and re.search(r'[0-9]', new_password)
+            and re.search(r'[^A-Za-z0-9]', new_password)):
+        raise ValueError('password_weak')
+    with connect() as connection:
+        row = connection.execute('SELECT username, password_hash FROM users WHERE id = ?', (user_id,)).fetchone()
+        if row is None:
+            raise ValueError('profile_account_missing')
+        credentials_changed = username != row['username'] or bool(new_password)
+        if credentials_changed and not verify_password(current_password, row['password_hash']):
+            raise ValueError('profile_password_incorrect')
+        try:
+            connection.execute(
+                'UPDATE users SET username=?, full_name=?, email=?, profession=?, address=? WHERE id=?',
+                (username, full_name.strip() or username, email.strip(), profession.strip(), address.strip(), user_id))
+            if new_password:
+                connection.execute('UPDATE users SET password_hash=? WHERE id=?', (hash_password(new_password), user_id))
+        except sqlite3.IntegrityError as error:
+            raise ValueError('username_exists') from error
+    return get_user_profile(user_id)

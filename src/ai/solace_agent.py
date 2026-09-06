@@ -13,7 +13,8 @@ from src.database.database import (
     get_month_check_ins,
     get_recent_scores,
 )
-from src.ui.translations import translate_text
+from src.ui.translations import translate_text, get_text
+from src.ui.resources import resources_for_score
 
 
 AGENT_MODEL_ID = "Qwen/Qwen3-1.7B"
@@ -33,6 +34,7 @@ TOOL_NAMES = {
     "recent_history",
     "date_check_in",
     "check_in_count",
+    "wellbeing_resources",
     "safety_support",
     "general",
 }
@@ -123,6 +125,11 @@ Return the date as YYYY-MM-DD.
 check_in_count
 Use when the user asks how many check-ins they have completed.
 
+wellbeing_resources
+Use when the user asks for resources, help, tips, activities, exercises,
+support, or something they can do to feel better, cope, relax or improve
+their wellbeing.
+
 safety_support
 Use when the user describes possible immediate danger, self-harm,
 suicidal intent, or an urgent medical or mental-health crisis.
@@ -141,6 +148,8 @@ Rules:
   when possible and use date_check_in.
 - Return JSON only with exactly these keys:
   {"tool": "tool_name", "date": "YYYY-MM-DD or empty string"}
+
+/no_think
 """.strip()
 
 
@@ -168,8 +177,14 @@ Safety boundaries:
 - If information is unavailable, say that it is unavailable.
 - Do not claim that you changed, deleted or sent any user data.
 - Keep the response supportive, concise and clear.
+- When the tool result contains resources, introduce them warmly in one
+  sentence, then list each resource's title and its description. Include
+  each resource's exact url from the tool result on its own. Never invent,
+  change or add any url. Only use urls present in the tool result.
 - Answer in English. Another model will translate the final response
   when the user has selected another language.
+
+/no_think
 """.strip()
 
 
@@ -278,14 +293,31 @@ class SolaceAgent:
         ]
 
         if isinstance(generated, list):
-            return str(
+            text = str(
                 generated[-1].get(
                     "content",
                     "",
                 )
-            ).strip()
+            )
+        else:
+            text = str(generated)
 
-        return str(generated).strip()
+        # Remove a complete Qwen reasoning block.
+        text = re.sub(
+            r"<think>.*?</think>",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
+        # Drop a stray leading </think> if the opening tag was suppressed.
+        text = re.sub(r"^.*?</think>", "", text, flags=re.DOTALL)
+        # Safety net: if a <think> block was left unclosed (truncated),
+        # drop everything from it onward so raw reasoning never shows.
+        text = re.sub(r"<think>.*$", "", text, flags=re.DOTALL)
+        # Remove any lone tags that slipped through.
+        text = text.replace("<think>", "").replace("</think>", "")
+
+        return text.strip()
 
     # --------------------------------------------------
     # Parse tool decision
@@ -362,7 +394,7 @@ class SolaceAgent:
 
         result = generator(
             messages,
-            max_new_tokens=80,
+            max_new_tokens=60,
             do_sample=False,
             pad_token_id=(
                 generator
@@ -553,6 +585,33 @@ class SolaceAgent:
             ),
         }
 
+        # --------------------------------------------------
+    # Tool 8 - curated wellbeing resources (score-based)
+    # --------------------------------------------------
+
+    def wellbeing_resources(self):
+        scores = get_recent_scores(self.user_id, 7) if self.user_id else []
+        latest = scores[-1] if scores else None
+
+        picked = resources_for_score(latest)
+
+        # Resolve verified titles/descriptions in the user's language.
+        # Links stay exactly as curated (never invented, never translated).
+        resources = []
+        for item in picked["resources"]:
+            resources.append({
+                "title": get_text(self.language_name, item["title_key"]),
+                "description": get_text(self.language_name, item["desc_key"]),
+                "url": item["url"],
+            })
+
+        return {
+            "status": "ok",
+            "latest_score": round(latest, 2) if latest is not None else None,
+            "band": picked["band"],
+            "resources": resources,
+        }
+    
     # --------------------------------------------------
     # Tool 7 - safety support
     # --------------------------------------------------
@@ -601,8 +660,12 @@ class SolaceAgent:
             return {
                 "status": "ok",
                 "message": (
-                    "No personal data or Solace "
-                    "help data was required."
+                    "This is a general or conversational message that "
+                    "does not need Solace documentation or saved user "
+                    "data. Reply warmly in one or two sentences, then "
+                    "gently remind the user you can explain how Solace "
+                    "works or help them understand their saved wellbeing "
+                    "history. Do not say you cannot answer."
                 ),
             }
 
@@ -636,6 +699,9 @@ class SolaceAgent:
 
         if tool == "check_in_count":
             return self.check_in_count()
+
+        if tool == "wellbeing_resources":
+            return self.wellbeing_resources()
 
         return {
             "status": "unsupported",
@@ -709,13 +775,68 @@ class SolaceAgent:
             ),
         )
 
-        return self.generated_content(
-            result
-        )
+        answer = self.generated_content(result)
+
+        if not answer:
+            answer = (
+                "I can help you understand how Solace works or explore "
+                "your saved wellbeing history. Could you tell me a little "
+                "more about what you'd like to know?"
+            )
+
+        return answer
 
     # --------------------------------------------------
     # Complete agent workflow
     # --------------------------------------------------
+
+        # --------------------------------------------------
+    # Instant replies for trivial messages (no model)
+    # --------------------------------------------------
+
+    @staticmethod
+    def quick_reply(question):
+        text = question.strip().lower().rstrip("!.?")
+
+        greetings = {
+            "hi", "hii", "hello", "hey", "yo",
+            "good morning", "good afternoon", "good evening",
+        }
+        thanks = {
+            "thanks", "thank you", "thx", "ty", "thankyou",
+        }
+        how_are_you = {
+            "how are you", "how are you today", "how r u",
+            "how are u", "hows it going", "how's it going",
+            "how do you do", "you okay", "are you okay",
+        }
+        who_are_you = {
+            "who are you", "what are you", "what is this",
+            "what can you do", "what do you do",
+        }
+
+        if text in greetings:
+            return (
+                "Hi! I can explain how Solace works or help you "
+                "understand your saved wellbeing history. What would "
+                "you like to know?"
+            )
+        if text in thanks:
+            return "You're welcome. Is there anything else about Solace I can help with?"
+        if text in how_are_you:
+            return (
+                "I'm doing well, thank you! I'm here to help you with "
+                "Solace. I can explain how it works or walk you through "
+                "your saved wellbeing history. What would you like to know?"
+            )
+        if text in who_are_you:
+            return (
+                "I'm the Solace Assistant. I can explain how Solace works "
+                "and help you understand your own saved wellbeing check-ins. "
+                "I only read your locally saved Solace information."
+            )
+
+        return None
 
     def answer(
         self,
@@ -733,6 +854,15 @@ class SolaceAgent:
                     "the Solace Assistant."
                 ),
                 "tool": "none",
+            }
+
+        # Instant path: greetings/thanks never load the model.
+        quick = self.quick_reply(question)
+        if quick is not None:
+            self.last_tool = "general"
+            return {
+                "answer": translate_text(quick, self.language_name),
+                "tool": "general",
             }
 
         try:

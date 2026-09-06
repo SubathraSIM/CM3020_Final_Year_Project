@@ -1,3 +1,6 @@
+from matplotlib import image
+
+from src.ui.account_widgets import add_avatar
 import re
 from pathlib import Path
 from PySide6.QtCore import QDate, QLocale, QRectF, QSize, Qt, QThread, Signal
@@ -6,11 +9,12 @@ from PySide6.QtWidgets import QCalendarWidget, QComboBox, QFrame, QHBoxLayout, Q
 from src.database.database import get_check_in_dates, get_check_in_for_date, get_month_check_ins
 from src.ui.check_in_page import MiniTrendGraph
 from src.ui.home_page import HoverSidebar
+from src.ui.ui_components import float_in
 from src.ui.translations import ENGLISH_TEXT, get_text, translate_texts
 ROOT = Path(__file__).resolve().parents[2]
 IMAGES = ROOT / 'src' / 'images'
 LOCALES = {'English': 'en_SG', 'Malay': 'ms_MY', 'Chinese': 'zh_CN', 'Tamil': 'ta_IN'}
-TREND_TEXT = {'history_title': 'Wellbeing history', 'history_subtitle': 'Select a date to review the wellbeing summary saved for that check-in.', 'monthly_trend': "This month's trend", 'trend_note': 'Each point represents a saved check-in.', 'trend_empty': 'Check in again to see the monthly trend.', 'checkin_calendar': 'Check-in calendar', 'calendar_note': 'A grey dot marks a date with a saved check-in.', 'saved_checkin': 'Saved check-in', 'select_date': 'Select a date', 'select_date_note': 'Select a date with a grey dot to review a saved wellbeing summary.', 'no_checkin': 'No check-in was completed on this date.', 'latest_checkin': 'Latest check-in at', 'input_used': 'Input used', 'history_transcript': 'Transcript', 'history_recommendations': 'Supportive recommendations', 'history_signals': 'Supporting signals'}
+TREND_TEXT = {'history_title': 'Wellbeing history', 'history_subtitle': 'Select a date to review the wellbeing summary saved for that check-in.', 'monthly_trend': "This month's trend", 'trend_note': 'Each point represents a saved check-in.', 'trend_empty': 'Complete at least 7 check-ins to unlock your monthly trend.', 'checkin_calendar': 'Check-in calendar', 'calendar_note': 'A grey dot marks a date with a saved check-in.', 'saved_checkin': 'Saved check-in', 'select_date': 'Select a date', 'select_date_note': 'Select a date with a grey dot to review a saved wellbeing summary.', 'no_checkin': 'No check-in was completed on this date.', 'latest_checkin': 'Latest check-in at', 'input_used': 'Input used', 'history_transcript': 'Transcript', 'history_recommendations': 'Supportive recommendations', 'history_signals': 'Supporting signals'}
 ENGLISH_TEXT.update(TREND_TEXT)
 
 class HistoryTranslationWorker(QThread):
@@ -121,19 +125,24 @@ class TrendsPage(QWidget):
         body.addLayout(left, 2)
         body.addWidget(self.build_summary_panel(), 3)
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(38, 22, 38, 26)
+        layout.setContentsMargins(28, 18, 28, 26)
         layout.setSpacing(14)
         layout.addLayout(self.build_header())
         layout.addWidget(self.title)
         layout.addWidget(self.subtitle)
         layout.addLayout(body, 1)
+        self.content = content
         return content
 
     def build_header(self):
         heart = QLabel()
-        heart.setFixedSize(30, 30)
+        heart.setFixedSize(42, 42)
+        heart.setPixmap(
+            QPixmap(str(IMAGES / "heart.png")).scaled(
+                60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+        )
         heart.setAlignment(Qt.AlignCenter)
-        heart.setPixmap(QPixmap(str(IMAGES / 'heart.png')).scaled(28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         brand = QLabel('Solace')
         brand.setObjectName('homeBrand')
         self.user_label = QLabel()
@@ -145,6 +154,7 @@ class TrendsPage(QWidget):
         layout.addWidget(brand)
         layout.addStretch()
         layout.addWidget(self.user_label)
+        add_avatar(layout)
         return layout
 
     def build_graph_card(self):
@@ -313,7 +323,7 @@ class TrendsPage(QWidget):
         card.setAttribute(Qt.WA_StyledBackground, True)
         self.history_image = QLabel()
         self.history_image.setObjectName('historyResultImage')
-        self.history_image.setFixedSize(QSize(100, 100))
+        self.history_image.setFixedSize(QSize(150, 150))
         self.history_image.setAlignment(Qt.AlignCenter)
         self.history_phrase = QLabel()
         self.history_phrase.setObjectName('historyPhrase')
@@ -440,11 +450,11 @@ class TrendsPage(QWidget):
         tamil = self.current_language == 'Tamil'
         sizes = [(self.title, 18), (self.subtitle, 10), (self.graph_title, 11), (self.graph_note, 9), (self.trend_empty, 9), (self.calendar_title, 11), (self.calendar_note, 9), (self.legend_text, 9), (self.signals_title, 11), (self.transcript_title, 11), (self.recommendation_title, 11), (self.history_phrase, 17), (self.history_explanation, 10), (self.history_input, 9)]
         for widget, size in sizes:
-            widget.setStyleSheet(f'font-size:{size}px;' if tamil else '')
+            widget.setStyleSheet(f'font-size:{max(size, 12)}px;' if tamil else '')
         for widget in self.signal_names.values():
-            widget.setStyleSheet('font-size:9px;' if tamil else '')
+            widget.setStyleSheet('font-size:12px;' if tamil else '')
         for widget in self.signal_values.values():
-            widget.setStyleSheet('font-size:9px;' if tamil else '')
+            widget.setStyleSheet('font-size:12px;' if tamil else '')
 
     def set_user(self, full_name, user_id=None):
         self.user_label.setText(full_name.split()[0] if full_name else '')
@@ -459,9 +469,14 @@ class TrendsPage(QWidget):
         self.load_selected_date()
         self.load_trend_graph()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.sidebar.set_expanded(HoverSidebar._shared_expanded)
+        float_in(self.content)
+
     def load_trend_graph(self):
         points = get_month_check_ins(self.user_id, 31)
-        if len(points) < 2:
+        if len(points) < 7:
             self.trend_graph.hide()
             self.trend_empty.show()
             return
@@ -584,25 +599,65 @@ class TrendsPage(QWidget):
         else:
             image = 'wellbeing_low.png'
         pixmap = QPixmap(str(IMAGES / image))
-        self.history_image.setPixmap(pixmap.scaled(88, 88, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.history_image.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
-    def set_recommendations(self, text):
-        while self.recommendation_layout.count():
-            item = self.recommendation_layout.takeAt(0)
+    def _clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        items = re.split('(?=\\b[1-3][.)]\\s*)', text)
-        for item in items:
-            item = item.strip().replace('**', '')
-            if not item:
-                continue
-            label = QLabel(item)
-            label.setObjectName('historyRecommendationItem')
-            label.setWordWrap(True)
-            if self.current_language == 'Tamil':
-                label.setStyleSheet('font-size:9px;')
-            self.recommendation_layout.addWidget(label)
+            elif item.layout():
+                self._clear_layout(item.layout())
 
+    def set_recommendations(self, text):
+        self._clear_layout(self.recommendation_layout)
+
+        tones = ['', 'mint', 'sand']
+        row = QHBoxLayout()
+        row.setSpacing(14)
+
+        index = 0
+        for chunk in re.split(r'(?=\b[1-3][.)]\s*)', text):
+            chunk = chunk.strip().replace('**', '')
+            if not chunk:
+                continue
+
+            body = re.sub(r'^[1-3][.)]\s*', '', chunk)
+            tone = tones[index % len(tones)]
+
+            card = QFrame()
+            card.setObjectName('recCard')
+            card.setAttribute(Qt.WA_StyledBackground, True)
+            card.setProperty('tone', tone)
+            card.setMinimumHeight(170)
+
+            inside = QVBoxLayout(card)
+            inside.setContentsMargins(22, 22, 22, 22)
+            inside.setSpacing(14)
+
+            number = QLabel(f'{index + 1}')
+            number.setObjectName('recCardNumber')
+            number.setProperty('tone', tone)
+            number.setFixedSize(44, 44)
+            number.setAlignment(Qt.AlignCenter)
+
+            text_label = QLabel(body)
+            text_label.setObjectName('recCardText')
+            text_label.setWordWrap(True)
+            text_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+
+            inside.addStretch()
+            inside.addWidget(number, 0, Qt.AlignHCenter)
+            inside.addWidget(text_label)
+            inside.addStretch()
+
+            if self.current_language == 'Tamil':
+                text_label.setStyleSheet('font-size:13px;')
+
+            row.addWidget(card, 1)
+            index += 1
+
+        self.recommendation_layout.addLayout(row)
     @staticmethod
     def score_zone(score):
         if score >= 67:

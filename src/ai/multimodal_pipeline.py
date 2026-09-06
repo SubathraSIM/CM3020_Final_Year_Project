@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import gc, math, re, subprocess, tempfile
+import gc, math, re, subprocess, tempfile, os
 from pathlib import Path
 from statistics import mean, median
 
@@ -28,7 +28,9 @@ _DDAMFN_DIR = r"C:\Users\Subathra\OneDrive\Desktop\Models\DDAMFN\DDAMFN++"
 _DDAMFN_CKPT = r"C:\Users\Subathra\OneDrive\Desktop\Models\DDAMFN\DDAMFN++\checkpoints_ver2.0\affecnet7_epoch19_acc0.671.pth"
 if _DDAMFN_DIR not in _sys.path:
     _sys.path.insert(0, _DDAMFN_DIR)
-from networks.DDAM import DDAMNet as _DDAMNet
+# Load the local vision network only when a video check-in needs it.
+_DDAMFN_DIR = os.environ.get("SOLACE_DDAMFN_DIR", _DDAMFN_DIR)
+_DDAMFN_CKPT = os.environ.get("SOLACE_DDAMFN_CHECKPOINT", str(Path(_DDAMFN_DIR) / "checkpoints_ver2.0" / "affecnet7_epoch19_acc0.671.pth"))
 
 # DDAMFN index order: 0 neutral,1 happy,2 sad,3 surprise,4 fear,5 disgust,6 anger
 _DDAMFN_NEG = [6, 4, 2, 5]   # anger, fear, sadness, disgust
@@ -183,6 +185,13 @@ class MultimodalPipeline:
     def load_ddamfn(self):
         if getattr(self, "ddamfn_model", None) is None:
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            if not Path(_DDAMFN_DIR).is_dir():
+                raise RuntimeError("The DDAMFN network folder was not found. Set SOLACE_DDAMFN_DIR to your DDAMFN++ folder, then restart Solace.")
+            if not Path(_DDAMFN_CKPT).is_file():
+                raise RuntimeError("The DDAMFN checkpoint was not found. Set SOLACE_DDAMFN_CHECKPOINT to your trained .pth file, then restart Solace.")
+            if _DDAMFN_DIR not in _sys.path:
+                _sys.path.insert(0, _DDAMFN_DIR)
+            from networks.DDAM import DDAMNet as _DDAMNet
             model = _DDAMNet(num_class=7, num_head=2, pretrained=False)
             model.load_state_dict(
                 torch.load(_DDAMFN_CKPT, map_location=device)["model_state_dict"]
@@ -799,29 +808,34 @@ class MultimodalPipeline:
 
         output.close()
 
-        subprocess.run(
-            [
-                imageio_ffmpeg
-                .get_ffmpeg_exe(),
-
-                "-y",
-                "-i",
-                video_path,
-
-                "-vn",
-                "-ac",
-                "1",
-
-                "-ar",
-                "16000",
-
-                "-c:a",
-                "pcm_s16le",
-
-                output.name,
-            ],
-            capture_output=True,
-        )
+        try:
+            subprocess.run(
+                [
+                    imageio_ffmpeg
+                    .get_ffmpeg_exe(),
+    
+                    "-y",
+                    "-i",
+                    video_path,
+    
+                    "-vn",
+                    "-ac",
+                    "1",
+    
+                    "-ar",
+                    "16000",
+    
+                    "-c:a",
+                    "pcm_s16le",
+    
+                    output.name,
+                ],
+                capture_output=True, check=True, timeout=120,
+            )
+    
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
+            Path(output.name).unlink(missing_ok=True)
+            raise RuntimeError("The video audio could not be extracted. Check that the video has an audio track and that FFmpeg is available.") from error
 
         return output.name
 
@@ -1024,6 +1038,7 @@ class MultimodalPipeline:
         self.audio_processor = None
         self.audio_model = None
         self.vision_model = None
+        self.ddamfn_model = None
         self.clean_memory()
 
     def release_qwen(self):
@@ -1164,11 +1179,16 @@ class AnalysisWorker(QThread):
         self.trend = trend
 
     def run(self):
+        stage = "initialisation"
+        def report_stage(key):
+            nonlocal stage
+            stage = key.removeprefix("processing_").replace("_", " ")
+            self.progress.emit(key)
         try:
             result = _PIPELINE.analyse(
                 self.recording_path,
                 self.recording_type,
-                self.progress.emit,
+                report_stage,
                 self.transcript,
                 language_name=
                     self.language_name,
@@ -1179,7 +1199,7 @@ class AnalysisWorker(QThread):
 
         except Exception as error:
             self.failed.emit(
-                str(error)
+                f"Stage: {stage}\n{type(error).__name__}: {error}"
             )
 
         finally:

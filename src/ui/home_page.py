@@ -1,11 +1,15 @@
+from src.ui.account_widgets import add_avatar
 from pathlib import Path
 
 from PySide6.QtCore import QDateTime, QLocale, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QPushButton,
-    QSizePolicy, QVBoxLayout, QWidget,
+    QSizePolicy, QVBoxLayout, QWidget, QScrollArea,
 )
+
+from src.ui.ui_components import GardenArtwork, AnimatedIllustration, scroll_page, reveal, float_in
+from src.ui.resources import RESOURCES, ResourceDialog
 
 from src.ui.translations import ENGLISH_TEXT, get_text
 
@@ -59,17 +63,31 @@ class HoverSidebar(QFrame):
     logout_requested = Signal()
 
     COLLAPSED = 76
-    EXPANDED = 220
+    EXPANDED = 196
+
+    # Shared across every page's sidebar so the open/closed choice persists
+    # when navigating between pages.
+    _shared_expanded = True
 
     def __init__(self):
         super().__init__()
 
         self.current_language = "English"
-        self.expanded = False
+        self.expanded = HoverSidebar._shared_expanded
 
         self.setObjectName("sideBar")
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setFixedWidth(self.COLLAPSED)
+        self.setFixedWidth(self.EXPANDED if self.expanded else self.COLLAPSED)
+
+        # Hamburger toggle at the top.
+        self.toggle_button = QPushButton()
+        self.toggle_button.setObjectName("navToggle")
+        self.toggle_button.setIcon(QIcon(str(IMAGES / "close_icon.png")))
+        self.toggle_button.setIconSize(QSize(60, 60))
+        self.toggle_button.setFixedHeight(60)
+        self.toggle_button.setCursor(Qt.PointingHandCursor)
+        self.toggle_button.setFocusPolicy(Qt.NoFocus)
+        self.toggle_button.clicked.connect(self.toggle)
 
         self.home_button = self.make_button("home_icon.png", "home", True)
         self.check_in_button = self.make_button("check_in_icon.png", "check_in")
@@ -86,8 +104,10 @@ class HoverSidebar(QFrame):
         self.logout_button.clicked.connect(self.logout_requested.emit)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 18, 10, 12)
+        layout.setContentsMargins(14, 20, 14, 20)
         layout.setSpacing(6)
+        layout.addWidget(self.toggle_button)
+        layout.addSpacing(8)
         layout.addWidget(self.home_button)
         layout.addWidget(self.check_in_button)
         layout.addWidget(self.trends_button)
@@ -96,15 +116,19 @@ class HoverSidebar(QFrame):
         layout.addWidget(self.settings_button)
         layout.addWidget(self.logout_button)
 
+        # Apply the shared collapsed/expanded state to this new sidebar.
+        self.set_expanded(self.expanded)
+
     def make_button(self, image, key, active=False):
         button = QPushButton()
         button.setObjectName("navButton")
         button.setIcon(QIcon(str(IMAGES / image)))
-        button.setIconSize(QSize(38, 38))
-        button.setFixedHeight(54)
+        button.setIconSize(QSize(60, 60))
+        button.setFixedHeight(60)
         button.setCursor(Qt.PointingHandCursor)
+        button.setFocusPolicy(Qt.NoFocus)
         button.setProperty("active", active)
-        button.setProperty("expanded", False)
+        button.setProperty("expanded", True)
         button.setProperty("textKey", key)
         return button
 
@@ -120,28 +144,35 @@ class HoverSidebar(QFrame):
 
     def set_language(self, language):
         self.current_language = language
+        tamil = language == "Tamil"
 
         for button in self.buttons():
             text = get_text(language, button.property("textKey"))
             button.setToolTip(text)
-            button.setText(f"   {text}" if self.expanded else "")
+            button.setAccessibleName(text)
+            button.setText(f"{text}" if self.expanded else "")
+            # Tamil words are longer — shrink so they fit the sidebar width.
+            button.setStyleSheet("font-size:10px;" if tamil else "")
 
-    def enterEvent(self, event):
-        self.set_expanded(True)
-        super().enterEvent(event)
+    def set_active(self, key):
+        for button in self.buttons():
+            active = button.property("textKey") == key
+            button.setProperty("active", active)
+            button.style().unpolish(button)
+            button.style().polish(button)
 
-    def leaveEvent(self, event):
-        self.set_expanded(False)
-        super().leaveEvent(event)
+    def toggle(self):
+        self.set_expanded(not self.expanded)
 
     def set_expanded(self, expanded):
         self.expanded = expanded
+        HoverSidebar._shared_expanded = expanded
         self.setFixedWidth(self.EXPANDED if expanded else self.COLLAPSED)
-
+        # Re-apply labels: text shows only when expanded.
+        self.set_language(self.current_language)
+        # Centre the icons when collapsed, left-align when expanded.
         for button in self.buttons():
-            text = get_text(self.current_language, button.property("textKey"))
-            button.setText(f"   {text}" if expanded else "")
-            button.setProperty("expanded", expanded)
+            button.setProperty("collapsed", not expanded)
             button.style().unpolish(button)
             button.style().polish(button)
 
@@ -170,8 +201,9 @@ class HomePage(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        self.content = self.build_content()
         layout.addWidget(self.sidebar)
-        layout.addWidget(self.build_content(), 1)
+        layout.addWidget(self.content, 1)
 
         self.clock_timer = QTimer(self)
         self.clock_timer.timeout.connect(self.update_clock)
@@ -179,47 +211,80 @@ class HomePage(QWidget):
 
         self.set_language("English")
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.sidebar.set_active("home")
+        self.sidebar.set_expanded(HoverSidebar._shared_expanded)
+        float_in(self.content)
+        
     def build_content(self):
         content = QWidget()
         content.setObjectName("homeContent")
-        content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        hero_row = QHBoxLayout()
-        hero_row.setSpacing(16)
-        hero_row.addWidget(self.build_hero(), 3)
-        hero_row.addWidget(self.build_time_card(), 1)
-
-        self.reminder_title = QLabel()
-        self.reminder_title.setObjectName("sectionTitle")
-
-        pause, self.pause_title, self.pause_text = self.tip_card()
-        hydrate, self.hydrate_title, self.hydrate_text = self.tip_card()
-        pattern, self.pattern_title, self.pattern_text = self.tip_card()
-
-        tips = QHBoxLayout()
-        tips.setSpacing(16)
-        tips.addWidget(pause, 1)
-        tips.addWidget(hydrate, 1)
-        tips.addWidget(pattern, 1)
-
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(40, 26, 40, 30)
-        layout.setSpacing(20)
+        layout.setContentsMargins(28, 18, 28, 18)
+        layout.setSpacing(10)
         layout.addLayout(self.build_header())
-        layout.addSpacing(4)
-        layout.addLayout(hero_row)
-        layout.addWidget(self.reminder_title)
-        layout.addLayout(tips)
-        layout.addStretch()
+        self.overview_label = QLabel()
+        self.overview_label.setObjectName("pageEyebrow")
+        layout.addWidget(self.overview_label)
+        layout.addWidget(self.build_hero())
 
+        quick = QHBoxLayout()
+        quick.setSpacing(16)
+        self.quick_labels = []
+        for title, description, signal, icon in [
+            ('home_trends_title', 'home_trends_desc', self.trends_requested, 'trends_icon'),
+            ('home_assistant_title', 'home_assistant_desc', self.assistant_requested, 'white_heart')]:
+            card = QPushButton()
+            card.setObjectName('quickCard')
+            card.setCursor(Qt.PointingHandCursor)
+            card.setMinimumHeight(72)
+            card.clicked.connect(signal.emit)
+            inside = QVBoxLayout(card)
+            inside.setContentsMargins(16, 12, 16, 12)
+            heading = QLabel(); heading.setObjectName('featureTitle')
+            note = QLabel(); note.setObjectName('featureDescription'); note.setWordWrap(True)
+            for label in (heading, note):
+                label.setAttribute(Qt.WA_TransparentForMouseEvents)
+                inside.addWidget(label)
+            self.quick_labels.append((card, heading, note, title, description))
+            quick.addWidget(card, 1)
+        layout.addLayout(quick)
+        self.resources_title = QLabel(); self.resources_title.setObjectName('sectionTitle')
+        self.resources_subtitle = QLabel(); self.resources_subtitle.setObjectName('featureDescription')
+        layout.addWidget(self.resources_title)
+        layout.addWidget(self.resources_subtitle)
+        resource_row = QHBoxLayout(); resource_row.setSpacing(16)
+        self.resource_labels = []
+        for resource in RESOURCES:
+            card = QPushButton(); card.setObjectName('resourceCard')
+            card.setCursor(Qt.PointingHandCursor)
+            card.setMinimumHeight(300)
+            card.clicked.connect(lambda checked=False, r=resource: ResourceDialog(r, self.current_language, self).exec())
+            inside = QVBoxLayout(card); inside.setContentsMargins(16, 12, 16, 12); inside.setSpacing(6)
+            kind = QLabel(); kind.setObjectName('resourceTag'); kind.setProperty('tone',resource[4])
+            title = QLabel(); title.setObjectName('resourceTitle'); title.setWordWrap(True)
+            description = QLabel(); description.setObjectName('featureDescription'); description.setWordWrap(True)
+            link = QLabel(); link.setObjectName('resourceLink'); link.hide()
+            art = AnimatedIllustration(['yoga.jpg', 'stretch.jpg', 'reading.jpg'][len(self.resource_labels)], fit=True)
+            art.setFixedHeight(190)
+            inside.addWidget(art)
+            for label in (kind, title, description):
+                label.setAttribute(Qt.WA_TransparentForMouseEvents)
+                inside.addWidget(label)
+            inside.addStretch()
+            self.resource_labels.append((card, kind, title, description, link, resource))
+            resource_row.addWidget(card, 1)
+        layout.addLayout(resource_row)
+        layout.addStretch()
         return content
 
     def build_header(self):
         heart = QLabel()
-        heart.setFixedSize(30, 30)
+        heart.setFixedSize(42, 42)
         heart.setPixmap(
             QPixmap(str(IMAGES / "heart.png")).scaled(
-                28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
         )
         heart.setAlignment(Qt.AlignCenter)
@@ -237,99 +302,31 @@ class HomePage(QWidget):
         layout.addWidget(brand)
         layout.addStretch()
         layout.addWidget(self.welcome_label)
+        add_avatar(layout)
         return layout
 
     def build_hero(self):
-        card = QFrame()
-        card.setObjectName("heroCard")
-        card.setAttribute(Qt.WA_StyledBackground, True)
-        card.setMinimumHeight(235)
-
-        self.hero_eyebrow = QLabel()
-        self.hero_eyebrow.setObjectName("heroEyebrow")
-
-        self.hero_title = QLabel()
-        self.hero_title.setObjectName("heroTitle")
-        self.hero_title.setWordWrap(True)
-
-        self.hero_description = QLabel()
-        self.hero_description.setObjectName("heroDescription")
-        self.hero_description.setWordWrap(True)
-
-        self.start_button = QPushButton()
-        self.start_button.setObjectName("startCheckInButton")
-        self.start_button.setFixedHeight(50)
-        self.start_button.setMinimumWidth(210)
-        self.start_button.setCursor(Qt.PointingHandCursor)
+        card = QFrame(); card.setObjectName('heroCard')
+        card.setMinimumHeight(230)
+        row = QHBoxLayout(card); row.setContentsMargins(0,0,0,0); row.setSpacing(0)
+        text = QVBoxLayout(); text.setContentsMargins(24,20,18,20); text.setSpacing(8)
+        self.hero_eyebrow = QLabel(); self.hero_eyebrow.setObjectName('heroEyebrow')
+        self.hero_title = QLabel(); self.hero_title.setObjectName('heroTitle'); self.hero_title.setWordWrap(True)
+        self.hero_description = QLabel(); self.hero_description.setObjectName('heroDescription'); self.hero_description.setWordWrap(True)
+        self.start_button = QPushButton(); self.start_button.setObjectName('startCheckInButton')
+        self.start_button.setFixedHeight(46); self.start_button.setCursor(Qt.PointingHandCursor)
         self.start_button.clicked.connect(self.check_in_requested.emit)
-
-        self.private_note = QLabel()
-        self.private_note.setObjectName("privacyNote")
-        self.private_note.setWordWrap(True)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(36, 28, 36, 28)
-        layout.setSpacing(10)
-        layout.addWidget(self.hero_eyebrow)
-        layout.addWidget(self.hero_title)
-        layout.addWidget(self.hero_description)
-        layout.addStretch()
-        layout.addWidget(self.start_button, 0, Qt.AlignLeft)
-        layout.addWidget(self.private_note)
-
+        self.private_note = QLabel(); self.private_note.setObjectName('privacyNote'); self.private_note.setWordWrap(True)
+        for widget in (self.hero_eyebrow,self.hero_title,self.hero_description): text.addWidget(widget)
+        text.addSpacing(10)
+        text.addWidget(self.start_button,0,Qt.AlignLeft)
+        text.addWidget(self.private_note)
+        text.addStretch()
+        row.addLayout(text, 3)
+        artwork = AnimatedIllustration("care.jpg", fit=True); artwork.setMinimumWidth(340)
+        row.addWidget(artwork, 3)
+        self.hero_card = card
         return card
-
-    def build_time_card(self):
-        card = QFrame()
-        card.setObjectName("featureCard")
-        card.setAttribute(Qt.WA_StyledBackground, True)
-        card.setMinimumWidth(220)
-
-        self.today_title = QLabel()
-        self.today_title.setObjectName("featureTitle")
-
-        self.time_value = QLabel()
-        self.time_value.setObjectName("homeTime")
-        self.time_value.setAlignment(Qt.AlignCenter)
-
-        self.date_value = QLabel()
-        self.date_value.setObjectName("featureDescription")
-        self.date_value.setAlignment(Qt.AlignCenter)
-        self.date_value.setWordWrap(True)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(10)
-        layout.addWidget(self.today_title)
-        layout.addStretch()
-        layout.addWidget(self.time_value)
-        layout.addWidget(self.date_value)
-        layout.addStretch()
-
-        return card
-
-    def tip_card(self):
-        card = QFrame()
-        card.setObjectName("featureCard")
-        card.setAttribute(Qt.WA_StyledBackground, True)
-        card.setMinimumHeight(135)
-
-        title = QLabel()
-        title.setObjectName("featureTitle")
-        title.setWordWrap(True)
-
-        text = QLabel()
-        text.setObjectName("featureDescription")
-        text.setWordWrap(True)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(22, 20, 22, 20)
-        layout.setSpacing(8)
-        layout.addWidget(title)
-        layout.addWidget(text)
-        layout.addStretch()
-
-        return card, title, text
 
     def t(self, key):
         return get_text(self.current_language, key)
@@ -338,51 +335,47 @@ class HomePage(QWidget):
         self.current_language = language
         self.locale = QLocale(LOCALES[language])
         self.sidebar.set_language(language)
-
-        texts = {
-            self.hero_eyebrow: "home_eyebrow",
-            self.hero_description: "home_description",
-            self.start_button: "start_check_in",
-            self.private_note: "home_private_note",
-            self.today_title: "today",
-            self.reminder_title: "wellbeing_reminders",
-            self.pause_title: "tip_pause_title",
-            self.pause_text: "tip_pause_text",
-            self.hydrate_title: "tip_hydrate_title",
-            self.hydrate_text: "tip_hydrate_text",
-            self.pattern_title: "tip_pattern_title",
-            self.pattern_text: "tip_pattern_text",
-        }
-
-        for widget, key in texts.items():
+        for widget, key in [(self.hero_eyebrow,'home_eyebrow'),(self.hero_description,'home_care_line'),
+                            (self.start_button,'start_check_in'),(self.private_note,'home_private_note'),
+                            (self.overview_label,'home_overview'),(self.resources_title,'resources_title'),
+                            (self.resources_subtitle,'resources_subtitle')]:
             widget.setText(self.t(key))
-
-        self.start_button.setMinimumWidth(250 if language == "Tamil" else 210)
-        self.update_clock()
+        for card, heading, note, title, description in self.quick_labels:
+            heading.setText(self.t(title)); note.setText(self.t(description))
+            card.setAccessibleName(self.t(title))
+        for card, kind, title, description, link, resource in self.resource_labels:
+            kind.setText(self.t(resource[0])); title.setText(self.t(resource[1]))
+            description.setText(self.t(resource[2])); link.setText(self.t('home_resource_link'))
+            card.setAccessibleName(self.t(resource[1])); card.setToolTip(resource[3])
         self.tamil_fonts()
+        self.update_clock()
 
     def tamil_fonts(self):
         tamil = self.current_language == "Tamil"
 
-        widgets = [
-            (self.hero_title, 24),
+        # Tamil text runs longer; shrink the big/hero text so it fits the
+        # cards without clipping. Other languages keep the CSS defaults.
+        sizes = [
             (self.hero_eyebrow, 9),
-            (self.hero_description, 10),
-            (self.start_button, 10),
-            (self.private_note, 9),
-            (self.today_title, 10),
-            (self.reminder_title, 15),
-            (self.pause_title, 11),
-            (self.pause_text, 9),
-            (self.hydrate_title, 11),
-            (self.hydrate_text, 9),
-            (self.pattern_title, 11),
-            (self.pattern_text, 9),
-            (self.welcome_label, 10),
+            (self.hero_title, 22),
+            (self.hero_description, 12),
+            (self.start_button, 11),
+            (self.private_note, 10),
+            (self.overview_label, 11),
+            (self.resources_title, 16),
+            (self.resources_subtitle, 11),
         ]
-
-        for widget, size in widgets:
+        for widget, size in sizes:
             widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+
+        # Quick cards + resource cards text.
+        for card, heading, note, title, description in self.quick_labels:
+            heading.setStyleSheet("font-size:13px;" if tamil else "")
+            note.setStyleSheet("font-size:11px;" if tamil else "")
+        for card, kind, title, description, link, resource in self.resource_labels:
+            kind.setStyleSheet("font-size:9px;" if tamil else "")
+            title.setStyleSheet("font-size:13px;" if tamil else "")
+            description.setStyleSheet("font-size:11px;" if tamil else "")
 
     def set_user(self, full_name):
         self.first_name = full_name.split()[0] if full_name else ""
@@ -403,12 +396,4 @@ class HomePage(QWidget):
             f"{greeting}, {self.first_name}" if self.first_name else greeting
         )
 
-        welcome = self.t("welcome")
-        self.welcome_label.setText(
-            f"{welcome}, {self.first_name}" if self.first_name else welcome
-        )
-
-        self.time_value.setText(now.time().toString("HH:mm"))
-        self.date_value.setText(
-            self.locale.toString(now.date(), "dddd, d MMMM yyyy")
-        )
+        self.welcome_label.setText(self.locale.toString(now.date(), "dddd, d MMMM yyyy"))

@@ -1,3 +1,4 @@
+from src.ui.account_widgets import add_avatar
 import math, random, re, struct, sys, tempfile, wave
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +14,7 @@ from PySide6.QtMultimedia import (
 )
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
+    QTabWidget, QSplitter,
     QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
     QLabel, QPlainTextEdit, QProgressBar, QPushButton, QSizePolicy,
     QStackedWidget, QVBoxLayout, QWidget,
@@ -21,6 +23,7 @@ from PySide6.QtWidgets import (
 from src.ai.multimodal_pipeline import AnalysisWorker, TranscriptionWorker
 from src.database.database import get_recent_scores, get_previous_scores, save_check_in
 from src.ui.home_page import HoverSidebar
+from src.ui.ui_components import float_in
 from src.ui.translations import ENGLISH_TEXT, get_text
 from statistics import mean, pstdev
 
@@ -115,6 +118,8 @@ CHECKIN_TEXT = {
     "head_off": "Off-centre",
     "supportive_recommendations": "Supportive recommendations",
     "qwen_note": "Generated from this check-in using Qwen.",
+    "rec_link_disclaimer": "Links are AI-generated and may occasionally be outdated or unavailable (404). Open with care.",
+    "rec_open_link": "Open resource  ↗",
     "saved_history": "Your check-in has been saved locally.",
     "done": "Done",
 
@@ -166,6 +171,14 @@ def button(name, height=44, width=None):
     return w
 
 
+ENGLISH_TEXT.update({
+    "video_tab": "Video check-in",
+    "video_position_note": "Keep your face in view and speak naturally. Review your recording before you submit.",
+    "audio_tab": "Audio check-in",
+    "capture_tab_note": "Switching tabs keeps your recording. Use Delete below to clear it.",
+    "stop_before_switch": "Stop your recording before switching tabs.",
+})
+
 class WaveformWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -188,7 +201,7 @@ class WaveformWidget(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        p.fillRect(self.rect(), QColor("#F8FAFC"))
+        p.fillRect(self.rect(), QColor("#F7F9FD"))
 
         gap, padding = 3, 14
         width = max(2.5, (self.width() - padding * 2 - gap * 39) / 40)
@@ -197,7 +210,7 @@ class WaveformWidget(QWidget):
 
         for value in self.levels:
             height = max(3, value * self.height() * 0.78)
-            p.setBrush(QColor("#2563EB" if value > 0.06 else "#C7D2FE"))
+            p.setBrush(QColor("#5579BE" if value > 0.06 else "#CCD9EE"))
             p.drawRoundedRect(QRectF(x, middle - height / 2, width, height), 3, 3)
             x += width + gap
 
@@ -223,7 +236,7 @@ class LoadingSpinner(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        pen = QPen(QColor("#2563EB"), 7)
+        pen = QPen(QColor("#5579BE"), 7)
         pen.setCapStyle(Qt.RoundCap)
         p.setPen(pen)
         p.drawArc(QRectF(10, 10, 70, 70), self.angle * 16, 275 * 16)
@@ -262,12 +275,12 @@ class MiniTrendGraph(QWidget):
             score = float(item["score"])
             points.append(QPointF(left + i * step, top + (100 - score) / 100 * height))
 
-        p.setPen(QPen(QColor("#2563EB"), 3))
+        p.setPen(QPen(QColor("#5579BE"), 3))
         for i in range(len(points) - 1):
             p.drawLine(points[i], points[i + 1])
 
         p.setBrush(QColor("#FFFFFF"))
-        p.setPen(QPen(QColor("#2563EB"), 2))
+        p.setPen(QPen(QColor("#5579BE"), 2))
         for point in points:
             p.drawEllipse(point, 4, 4)
 
@@ -356,7 +369,7 @@ class UploadDialog(QDialog):
 
         if self.language == "Tamil":
             for w in texts:
-                w.setStyleSheet("font-size:10px;")
+                w.setStyleSheet("font-size:12px;")
 
     def change_type(self):
         self.selected_type = self.type_combo.currentData()
@@ -492,15 +505,20 @@ class CheckInPage(QWidget):
 
         self.set_language("English")
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.sidebar.set_expanded(HoverSidebar._shared_expanded)
+        float_in(self.stack)
+
     # ---------------- UI ----------------
 
     def header(self):
         heart = QLabel()
-        heart.setFixedSize(30, 30)
+        heart.setFixedSize(42, 42)
         heart.setAlignment(Qt.AlignCenter)
         heart.setPixmap(
             QPixmap(str(IMAGES / "heart.png")).scaled(
-                28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
         )
 
@@ -516,6 +534,7 @@ class CheckInPage(QWidget):
         row.addWidget(brand)
         row.addStretch()
         row.addWidget(user)
+        add_avatar(row)
         return row
 
     def build_capture(self):
@@ -528,30 +547,53 @@ class CheckInPage(QWidget):
         self.capture_status.hide()
 
         title = QHBoxLayout()
-        title.addWidget(self.capture_title)
-        title.addStretch()
+        title.addWidget(self.capture_title, 1)
         title.addWidget(self.capture_status)
 
-        cards = QHBoxLayout()
-        cards.setSpacing(16)
-        cards.addWidget(self.build_video(), 1)
-        cards.addWidget(self.build_audio(), 1)
+        self.capture_tabs = QTabWidget()
+        self.capture_tabs.setObjectName("captureTabs")
+        self.capture_tabs.setDocumentMode(False)
+        self.capture_tabs.tabBar().setDrawBase(False)
+        self.capture_tabs.setAutoFillBackground(False)
+        self.capture_tabs.addTab(self.build_video(), "Video check-in")
+        self.capture_tabs.addTab(self.build_audio(), "Audio check-in")
+        self._capture_tab_index = 0
+        self.capture_tabs.currentChanged.connect(self.capture_tab_changed)
+
+        self.capture_tabs.setMinimumHeight(290)
+        workspace = QSplitter(Qt.Vertical)
+        workspace.setObjectName("captureWorkspace")
+        workspace.setChildrenCollapsible(False)
+        workspace.setHandleWidth(10)
+        workspace.addWidget(self.capture_tabs)
+        workspace.addWidget(self.build_transcript())
+        workspace.setSizes([290, 180])
+        workspace.setStretchFactor(0, 0)
+        workspace.setStretchFactor(1, 1)
 
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(40, 20, 40, 22)
+        layout.setContentsMargins(28, 18, 28, 22)
         layout.setSpacing(10)
         layout.addLayout(self.header())
         layout.addLayout(title)
         layout.addWidget(self.capture_subtitle)
-        layout.addLayout(cards, 3)
-        layout.addWidget(self.build_transcript(), 2)
+        layout.addWidget(workspace, 1)
         layout.addWidget(self.build_actions())
         return page
+
+    def capture_tab_changed(self, index):
+        # Never hide active recording controls. Switching idle tabs preserves media.
+        if self.video_recording or self.audio_recording:
+            self.capture_tabs.blockSignals(True)
+            self.capture_tabs.setCurrentIndex(self._capture_tab_index)
+            self.capture_tabs.blockSignals(False)
+            self.status(self.t("stop_before_switch"))
+            return
+        self._capture_tab_index = index
 
     def build_video(self):
         card = frame("videoCaptureCard")
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        card.setFixedHeight(232)
 
         self.video_title = label("captureCardTitle", True)
         self.video_title.setSizePolicy(
@@ -561,7 +603,8 @@ class CheckInPage(QWidget):
 
         self.video_stack = QStackedWidget()
         self.video_stack.setObjectName("videoPreviewStack")
-        self.video_stack.setFixedSize(300, 135)
+        self.video_stack.setMinimumSize(0, 175)
+        self.video_stack.setMaximumHeight(16777215)
 
         placeholder = QWidget()
         placeholder.setObjectName("videoPlaceholder")
@@ -573,8 +616,9 @@ class CheckInPage(QWidget):
 
         self.video_widget = QVideoWidget()
         self.video_widget.setObjectName("videoWidget")
-        self.video_widget.setFixedSize(300, 135)
-        self.video_widget.setAspectRatioMode(Qt.KeepAspectRatioByExpanding)
+        self.video_widget.setMinimumSize(0, 175)
+        self.video_widget.setMaximumHeight(16777215)
+        self.video_widget.setAspectRatioMode(Qt.KeepAspectRatio)
 
         self.video_stack.addWidget(placeholder)
         self.video_stack.addWidget(self.video_widget)
@@ -595,66 +639,93 @@ class CheckInPage(QWidget):
         self.video_play.clicked.connect(self.toggle_video_play)
         self.set_play_icon(self.video_play, False)
 
-        self.video_button = button("recordButton", 42, 190)
+        self.video_button = button("recordButton", 42, 150)
         self.video_button.clicked.connect(self.toggle_video)
 
         controls = QHBoxLayout()
-        controls.addWidget(self.video_status)
-        controls.addWidget(self.video_time)
-        controls.addStretch()
         controls.addWidget(self.video_play)
         controls.addWidget(self.video_button)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 10, 20, 12)
-        layout.setSpacing(5)
-        layout.addWidget(self.video_title)
-        layout.addWidget(
-            self.video_stack,
-            0,
-            Qt.AlignHCenter | Qt.AlignTop,
-        )
-        layout.addSpacing(2)
-        layout.addLayout(controls)
+        self.video_note = label("captureCardText", True)
+        self.video_note.setText(self.t("video_position_note"))
+        details = QWidget()
+        details.setMinimumWidth(224)
+        details.setMaximumWidth(280)
+        info = QVBoxLayout(details)
+        info.setContentsMargins(0, 0, 0, 0)
+        info.setSpacing(10)
+        info.addWidget(self.video_title)
+        info.addWidget(self.video_note)
+        info.addStretch()
+        info.addWidget(self.video_status)
+        info.addWidget(self.video_time)
+        info.addLayout(controls)
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(20)
+        layout.addWidget(self.video_stack, 1)
+        layout.addWidget(details)
         return card
 
     def build_audio(self):
         card = frame("checkInLowerCard")
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.audio_title = label("captureCardTitle", True)
-        self.audio_note = label("captureCardText", True)
-        self.waveform = WaveformWidget()
+        self.audio_title.setSizePolicy(
+            QSizePolicy.Ignored,
+            QSizePolicy.Preferred,
+        )
 
-        self.audio_play = button("audioPlayButton", 46, 46)
+        self.waveform = WaveformWidget()
+        self.waveform.setMinimumHeight(175)
+        self.waveform.setSizePolicy(
+            QSizePolicy.Expanding,
+            QSizePolicy.Expanding,
+        )
+
+        self.audio_status = label("recordingStatus")
+        self.audio_status.setSizePolicy(
+            QSizePolicy.Ignored,
+            QSizePolicy.Preferred,
+        )
+
+        self.audio_time = QLabel("00:00")
+        self.audio_time.setObjectName("recordingTimeSmall")
+        self.audio_time.setFixedWidth(42)
+
+        self.audio_play = button("audioPlayButton", 42, 56)
         self.audio_play.setIconSize(QSize(18, 18))
         self.audio_play.setEnabled(False)
         self.audio_play.clicked.connect(self.toggle_audio_play)
         self.set_play_icon(self.audio_play, False)
 
-        wave = QHBoxLayout()
-        wave.addWidget(self.waveform, 1)
-        wave.addWidget(self.audio_play)
-
-        self.audio_status = label("recordingStatus")
-        self.audio_time = QLabel("00:00")
-        self.audio_time.setObjectName("recordingTimeSmall")
-
-        self.audio_button = button("recordButton", 42)
+        self.audio_button = button("recordButton", 42, 150)
         self.audio_button.clicked.connect(self.toggle_audio)
 
-        status = QHBoxLayout()
-        status.addWidget(self.audio_status)
-        status.addStretch()
-        status.addWidget(self.audio_time)
+        controls = QHBoxLayout()
+        controls.addWidget(self.audio_play)
+        controls.addWidget(self.audio_button)
 
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(7)
-        layout.addWidget(self.audio_title)
-        layout.addWidget(self.audio_note)
-        layout.addLayout(wave, 1)
-        layout.addLayout(status)
-        layout.addWidget(self.audio_button)
+        self.audio_note = label("captureCardText", True)
+
+        details = QWidget()
+        details.setMinimumWidth(224)
+        details.setMaximumWidth(280)
+        info = QVBoxLayout(details)
+        info.setContentsMargins(0, 0, 0, 0)
+        info.setSpacing(10)
+        info.addWidget(self.audio_title)
+        info.addWidget(self.audio_note)
+        info.addStretch()
+        info.addWidget(self.audio_status)
+        info.addWidget(self.audio_time)
+        info.addLayout(controls)
+
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(20)
+        layout.addWidget(self.waveform, 1)
+        layout.addWidget(details)
         return card
 
     def build_transcript(self):
@@ -701,20 +772,24 @@ class CheckInPage(QWidget):
         page.setObjectName("processingPage")
 
         card = frame("processingCard")
+        card.setFixedWidth(560)
+        card.setMinimumHeight(440)
         self.spinner = LoadingSpinner()
         self.processing_title = label("processingTitle", align=Qt.AlignCenter)
         self.processing_message = label("processingMessage", True, Qt.AlignCenter)
         self.processing_note = label("processingNote", True, Qt.AlignCenter)
 
         inside = QVBoxLayout(card)
-        inside.setContentsMargins(50, 44, 50, 44)
-        inside.setSpacing(14)
+        inside.setContentsMargins(70, 60, 70, 60)
+        inside.setSpacing(18)
         inside.addWidget(self.spinner, 0, Qt.AlignCenter)
         inside.addWidget(self.processing_title)
         inside.addWidget(self.processing_message)
         inside.addWidget(self.processing_note)
 
         layout = QVBoxLayout(page)
+        layout.setContentsMargins(40, 20, 40, 22)
+        layout.addLayout(self.header())
         layout.addStretch()
         layout.addWidget(card, 0, Qt.AlignCenter)
         layout.addStretch()
@@ -729,7 +804,7 @@ class CheckInPage(QWidget):
 
         summary = frame("resultSummaryCard")
         self.result_image = label("resultEmoji", align=Qt.AlignCenter)
-        self.result_image.setFixedHeight(90)
+        self.result_image.setFixedHeight(120)
         self.result_phrase = label("resultPhrase", True)
         self.result_explanation = label("resultExplanation", True)
         self.summary_note = label("resultReminder", True)
@@ -800,7 +875,7 @@ class CheckInPage(QWidget):
         rec_layout.addWidget(self.rec_area, 1)
 
         actions = frame("checkInActionCard")
-        self.done_note = label("checkInInformation", True)
+        self.done_note = label("checkInInformation", False)
         self.done_button = button("submitCheckInButton", 44, 160)
         self.done_button.clicked.connect(self.finish)
 
@@ -1188,13 +1263,14 @@ class CheckInPage(QWidget):
         )
         self.transcription_worker.completed.connect(self.transcription_done)
         self.transcription_worker.failed.connect(self.transcription_failed)
+        worker = self.transcription_worker
+        worker.finished.connect(lambda w=worker: self.worker_finished("transcription_worker", w))
         self.transcription_worker.start()
 
     def transcription_done(self, text):
         self.transcript.setPlainText(text)
         self.transcript.setReadOnly(False)
         self.submit_button.setEnabled(True)
-        self.transcription_worker = None
         self.set_busy(False)
 
     def transcription_failed(self, message):
@@ -1203,7 +1279,7 @@ class CheckInPage(QWidget):
         self.transcript.setPlaceholderText(self.t("transcript_unavailable"))
         self.submit_button.setEnabled(False)
         self.status(self.t("transcription_failed"))
-        self.transcription_worker = None
+        self.show_failure_details("transcription_failed", message)
         self.set_busy(False)
 
     # ---------------- Analysis ----------------
@@ -1255,6 +1331,8 @@ class CheckInPage(QWidget):
         self.analysis_worker.completed.connect(self.analysis_done)
         self.analysis_worker.failed.connect(self.analysis_failed)
         self.set_busy(True)
+        worker = self.analysis_worker
+        worker.finished.connect(lambda w=worker: self.worker_finished("analysis_worker", w))
         self.analysis_worker.start()
 
     def analysis_progress(self, key):
@@ -1264,31 +1342,36 @@ class CheckInPage(QWidget):
     def analysis_done(self, result):
         self.spinner.stop()
 
-        previous = get_recent_scores(self.user_id, 1)
-        previous_score = previous[-1] if previous else None
-        score = round(result["wellbeing_score"])
-
-        phrase_key, explanation_key, image = self.result_text(score, previous_score)
-        baseline = self.baseline_status(score)
-
-        result["phrase"] = self.t(phrase_key)
-        result["explanation"] = self.t(explanation_key)
-
-        result["phrase_english"] = ENGLISH_TEXT[phrase_key]
-        result["explanation_english"] = ENGLISH_TEXT[explanation_key]
-
-        result["image_name"] = image
-        result["baseline"] = baseline
-
-        save_check_in(self.user_id, result)
-        for f in (self.video_file, self.audio_file):
-            if f:
-                Path(f).unlink(missing_ok=True)
-
-        self.populate_result(result)
-        self.stack.setCurrentWidget(self.result_page)
-        self.analysis_worker = None
-        self.set_busy(False)
+        try:
+            previous = get_recent_scores(self.user_id, 1)
+            previous_score = previous[-1] if previous else None
+            score = round(result["wellbeing_score"])
+    
+            phrase_key, explanation_key, image = self.result_text(score, previous_score)
+            baseline = self.baseline_status(score)
+    
+            result["phrase"] = self.t(phrase_key)
+            result["explanation"] = self.t(explanation_key)
+    
+            result["phrase_english"] = ENGLISH_TEXT[phrase_key]
+            result["explanation_english"] = ENGLISH_TEXT[explanation_key]
+    
+            result["image_name"] = image
+            result["baseline"] = baseline
+    
+            save_check_in(self.user_id, result)
+            for f, owned in ((self.video_file, self.video_local), (self.audio_file, self.audio_local)):
+                if f and owned:
+                    try:
+                        Path(f).unlink(missing_ok=True)
+                    except OSError:
+                        pass  # A playback lock must not turn a saved result into a failure.
+    
+            self.populate_result(result)
+            self.stack.setCurrentWidget(self.result_page)
+            self.set_busy(False)
+        except Exception as error:
+            self.analysis_failed(str(error))
 
     def analysis_failed(self, message):
         print("ANALYSIS ERROR:", message)
@@ -1296,11 +1379,11 @@ class CheckInPage(QWidget):
         self.spinner.stop()
         self.stack.setCurrentWidget(self.capture_page)
         self.status(self.t("analysis_failed"))
+        self.show_failure_details("analysis_failed", message)
 
         if self.video_file:
             self.show_video(self.video_file)
 
-        self.analysis_worker = None
         self.set_busy(False)
 
     # ---------------- Results ----------------
@@ -1336,7 +1419,7 @@ class CheckInPage(QWidget):
 
         pixmap = QPixmap(str(IMAGES / result["image_name"]))
         self.result_image.setPixmap(
-            pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap.scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         )
 
         self.result_phrase.setText(result["phrase"])
@@ -1383,28 +1466,65 @@ class CheckInPage(QWidget):
         for key, value in values.items():
             self.signal_values[key].setText(value)
 
-    def set_recommendations(self, text):
-        while self.rec_layout.count():
-            item = self.rec_layout.takeAt(0)
+    def _clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+            elif item.layout():
+                self._clear_layout(item.layout())
 
-        for item in re.split(r"(?=\b[1-3][.)]\s*)", text):
-            item = item.strip().replace("**", "")
+    def set_recommendations(self, text):
+        self._clear_layout(self.rec_layout)
 
-            if not item:
+        tones = ["", "mint", "sand"]
+        row = QHBoxLayout()
+        row.setSpacing(14)
+
+        index = 0
+        for chunk in re.split(r"(?=\b[1-3][.)]\s*)", text):
+            chunk = chunk.strip().replace("**", "")
+            if not chunk:
                 continue
 
-            w = label("recommendationItem", True)
-            w.setText(item)
+            # Strip the leading "1. " / "2) " numbering.
+            body = re.sub(r"^[1-3][.)]\s*", "", chunk)
+
+            tone = tones[index % len(tones)]
+
+            card = QFrame()
+            card.setObjectName("recCard")
+            card.setAttribute(Qt.WA_StyledBackground, True)
+            card.setProperty("tone", tone)
+            card.setMinimumHeight(170)
+
+            inside = QVBoxLayout(card)
+            inside.setContentsMargins(22, 22, 22, 22)
+            inside.setSpacing(14)
+
+            number = QLabel(f"{index + 1}")
+            number.setObjectName("recCardNumber")
+            number.setProperty("tone", tone)
+            number.setFixedSize(44, 44)
+            number.setAlignment(Qt.AlignCenter)
+
+            text_label = QLabel(body)
+            text_label.setObjectName("recCardText")
+            text_label.setWordWrap(True)
+            text_label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+
+            inside.addStretch()
+            inside.addWidget(number, 0, Qt.AlignHCenter)
+            inside.addWidget(text_label)
+            inside.addStretch()
 
             if self.current_language == "Tamil":
-                w.setStyleSheet("font-size:9px;")
+                text_label.setStyleSheet("font-size:13px;")
 
-            self.rec_layout.addWidget(w)
+            row.addWidget(card, 1)
+            index += 1
 
-        self.rec_layout.addStretch()
-
+        self.rec_layout.addLayout(row)
     # ---------------- Translation ----------------
 
     def t(self, key):
@@ -1452,6 +1572,11 @@ class CheckInPage(QWidget):
             self.transcript.setPlaceholderText(self.t("transcript_placeholder"))
 
         self.refresh_recording_text()
+        self.video_note.setText(self.t("video_position_note"))
+        self.capture_tabs.setTabText(0, self.t("video_tab"))
+        self.capture_tabs.setTabText(1, self.t("audio_tab"))
+        self.capture_tabs.setTabToolTip(0, self.t("capture_tab_note"))
+        self.capture_tabs.setTabToolTip(1, self.t("capture_tab_note"))
         self.tamil_fonts()
 
     def refresh_recording_text(self):
@@ -1511,13 +1636,19 @@ class CheckInPage(QWidget):
         ]
 
         for w, size in widgets:
-            w.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+            w.setStyleSheet(f"font-size:{max(size, 12)}px;" if tamil else "")
 
         for w in self.user_labels:
             w.setStyleSheet("font-size:11px;" if tamil else "")
 
         for w in list(self.signal_names.values()) + list(self.signal_values.values()):
-            w.setStyleSheet("font-size:9px;" if tamil else "")
+            w.setStyleSheet("font-size:12px;" if tamil else "")
+
+        # Tamil record labels are longer than the English 150px buttons,
+        # so give them more width (and the details column room to match).
+        record_width = 200 if tamil else 150
+        self.video_button.setFixedWidth(record_width)
+        self.audio_button.setFixedWidth(record_width)
 
     # ---------------- Reset ----------------
 
@@ -1603,3 +1734,17 @@ class CheckInPage(QWidget):
 
     def finish(self):
         self.home_requested.emit()
+    def show_failure_details(self, key, message):
+        from PySide6.QtWidgets import QMessageBox
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle(self.t(key))
+        dialog.setIcon(QMessageBox.Warning)
+        dialog.setText(self.t(key))
+        dialog.setInformativeText(str(message)[:800] or "No error details were returned.")
+        dialog.setDetailedText(str(message))
+        dialog.exec()
+
+    def worker_finished(self, attribute, worker):
+        if getattr(self, attribute, None) is worker:
+            setattr(self, attribute, None)
+        worker.deleteLater()

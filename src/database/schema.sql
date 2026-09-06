@@ -3,6 +3,9 @@ CREATE TABLE IF NOT EXISTS users (
     full_name TEXT NOT NULL,
     username TEXT NOT NULL COLLATE NOCASE UNIQUE,
     password_hash TEXT NOT NULL,
+    email TEXT NOT NULL DEFAULT '',
+    profession TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
     consent_accepted INTEGER NOT NULL DEFAULT 0,
     consent_accepted_at TEXT
 );

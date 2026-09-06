@@ -194,7 +194,7 @@ class ConsentDialog(QDialog):
         ]
 
         for widget, size in widgets:
-            widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+            widget.setStyleSheet(f"font-size:{max(size, 12)}px;" if tamil else "")
 
 
 class ThankYouDialog(QDialog):
@@ -221,7 +221,7 @@ class ThankYouDialog(QDialog):
 
         if language == "Tamil":
             title.setStyleSheet("font-size:15px;")
-            message.setStyleSheet("font-size:9px;")
+            message.setStyleSheet("font-size:12px;")
 
         layout = QVBoxLayout(card)
         layout.setContentsMargins(34, 24, 34, 24)

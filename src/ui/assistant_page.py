@@ -1,3 +1,4 @@
+from src.ui.account_widgets import add_avatar
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QFontMetrics, QPixmap
 from PySide6.QtWidgets import (
@@ -8,12 +9,14 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from src.ai.solace_agent import SolaceAgent
 from src.ui.home_page import HoverSidebar
+from src.ui.ui_components import float_in
 from src.ui.translations import (
     ENGLISH_TEXT,
     get_text,
@@ -32,6 +35,9 @@ ASSISTANT_TEXT = {
 
     "assistant_subtitle":
         "Ask about Solace or your saved wellbeing history.",
+
+    "assistant_hero_prompt":
+        "How can I help you today?",
 
     "assistant_private":
         "Private by design — the Assistant only reads your locally saved Solace information.",
@@ -242,7 +248,7 @@ class AssistantPage(QWidget):
 
         self.set_active_sidebar()
 
-        content = self.build_content()
+        self.content = self.build_content()
 
         layout = QHBoxLayout(
             self
@@ -264,7 +270,7 @@ class AssistantPage(QWidget):
         )
 
         layout.addWidget(
-            content,
+            self.content,
             1,
         )
 
@@ -274,6 +280,10 @@ class AssistantPage(QWidget):
 
         self.clear_chat()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.sidebar.set_expanded(HoverSidebar._shared_expanded)
+        float_in(self.content)
     # --------------------------------------------------
     # Translation
     # --------------------------------------------------
@@ -312,6 +322,12 @@ class AssistantPage(QWidget):
         self.subtitle.setText(
             self.t(
                 "assistant_subtitle"
+            )
+        )
+
+        self.empty_prompt.setText(
+            self.t(
+                "assistant_hero_prompt"
             )
         )
 
@@ -437,7 +453,7 @@ class AssistantPage(QWidget):
 
         for widget, size in widgets:
             widget.setStyleSheet(
-                f"font-size:{size}px;"
+                f"font-size:{max(size, 12)}px;"
                 if tamil
                 else ""
             )
@@ -655,45 +671,93 @@ class AssistantPage(QWidget):
         )
         self.status_label.hide()
 
-        layout = QVBoxLayout(
-            content
-        )
-        layout.setContentsMargins(
-            38,
-            22,
-            38,
-            22,
-        )
-        layout.setSpacing(
-            12
-        )
+        # Build the shared pieces once.
+        self.hero_card_widget = hero
+        chat_area = self.build_chat_area()
+        suggestions = self.build_suggestions()
+        composer = self.build_input()
 
-        layout.addLayout(
-            self.build_header()
-        )
-        layout.addSpacing(
-            2
-        )
-        layout.addWidget(
-            hero
-        )
-        layout.addWidget(
-            self.build_chat_area(),
-            1,
-        )
-        layout.addLayout(
-            self.build_suggestions()
-        )
-        layout.addWidget(
-            self.build_input()
-        )
-        # Thinking feedback is shown inside the chat instead of as a
-        # separate status strip below the composer.
-        layout.addWidget(
-            self.disclaimer
-        )
+        # --- Empty state (page 0): centered prompt + input + suggestions ---
+        self.empty_prompt = QLabel()
+        self.empty_prompt.setObjectName("assistantHeroPrompt")
+        self.empty_prompt.setAlignment(Qt.AlignCenter)
+        self.empty_prompt.setWordWrap(True)
+
+        empty_page = QWidget()
+        empty_layout = QVBoxLayout(empty_page)
+        empty_layout.setContentsMargins(60, 0, 60, 0)
+        empty_layout.setSpacing(18)
+        empty_layout.addStretch()
+        empty_layout.addWidget(self.empty_prompt)
+        # composer + suggestions are re-parented here in show_empty_state()
+        self.empty_slot = QVBoxLayout()
+        self.empty_slot.setSpacing(14)
+        empty_layout.addLayout(self.empty_slot)
+        empty_layout.addStretch()
+
+        # --- Active state (page 1): chat fills, input pinned to bottom ---
+        active_page = QWidget()
+        active_layout = QVBoxLayout(active_page)
+        active_layout.setContentsMargins(0, 0, 0, 0)
+        active_layout.setSpacing(10)
+        active_layout.addWidget(chat_area, 1)
+        # composer + suggestions are re-parented here in show_active_state()
+        self.active_slot = QVBoxLayout()
+        self.active_slot.setSpacing(10)
+        active_layout.addLayout(self.active_slot)
+
+        self.state_stack = QStackedWidget()
+        self.state_stack.addWidget(empty_page)   # index 0
+        self.state_stack.addWidget(active_page)  # index 1
+
+        # Keep handles so we can move them between the two pages.
+        self._suggestions_layout = suggestions
+        self._composer = composer
+
+        # Hero card is intentionally not added — the page shows only the
+        # header, the chat/empty state, and the input. Kept alive but hidden
+        # so set_language() can still set its text without error.
+        hero.hide()
+
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(28, 18, 38, 22)
+        layout.setSpacing(12)
+        layout.addLayout(self.build_header())
+        layout.addSpacing(2)
+        layout.addWidget(self.state_stack, 1)
+        layout.addWidget(self.disclaimer)
+
+        # Start in the empty state.
+        self.show_empty_state()
 
         return content
+
+    # --------------------------------------------------
+    # Empty / active state switching (ChatGPT-style)
+    # --------------------------------------------------
+
+    def _move_layout(self, child_layout, target_layout):
+        """Detach a QLayout from its current parent layout and add it to target."""
+        parent = child_layout.parent()
+        if isinstance(parent, QVBoxLayout):
+            parent.removeItem(child_layout)
+        target_layout.addLayout(child_layout)
+
+    def _move_widget(self, widget, target_layout):
+        widget.setParent(None)
+        target_layout.addWidget(widget)
+
+    def show_empty_state(self):
+        # Big centered prompt + input + suggestions.
+        self._move_widget(self._composer, self.empty_slot)
+        self._move_layout(self._suggestions_layout, self.empty_slot)
+        self.state_stack.setCurrentIndex(0)
+
+    def show_active_state(self):
+        # Chat fills the page; input pinned to the bottom.
+        self._move_widget(self._composer, self.active_slot)
+        self._move_layout(self._suggestions_layout, self.active_slot)
+        self.state_stack.setCurrentIndex(1)
 
     # --------------------------------------------------
     # Header
@@ -702,11 +766,11 @@ class AssistantPage(QWidget):
     def build_header(self):
         heart = QLabel()
         heart.setFixedSize(
-            30,
-            30,
+            42,
+            42,
         )
         heart.setAlignment(
-            Qt.AlignCenter
+            Qt.AlignRight | Qt.AlignVCenter
         )
 
         from pathlib import Path
@@ -728,8 +792,8 @@ class AssistantPage(QWidget):
             QPixmap(
                 str(image_path)
             ).scaled(
-                28,
-                28,
+                60,
+                60,
                 Qt.KeepAspectRatio,
                 Qt.SmoothTransformation,
             )
@@ -756,7 +820,7 @@ class AssistantPage(QWidget):
 
         row = QHBoxLayout()
         row.setSpacing(
-            7
+            2
         )
         row.addWidget(
             heart
@@ -769,6 +833,7 @@ class AssistantPage(QWidget):
             self.user_label
         )
 
+        add_avatar(row)
         return row
 
     # --------------------------------------------------
@@ -1176,6 +1241,9 @@ class AssistantPage(QWidget):
             row_widget,
         )
 
+        # Expose the text label so callers can animate it (typewriter).
+        row_widget.message_label = message
+
         QTimer.singleShot(
             0,
             self.scroll_to_bottom,
@@ -1319,7 +1387,7 @@ class AssistantPage(QWidget):
             if widget:
                 widget.deleteLater()
 
-        self.add_welcome_message()
+        self.show_empty_state()
 
         self.status_message(
             ""
@@ -1358,6 +1426,10 @@ class AssistantPage(QWidget):
 
         if not question:
             return
+
+        # First message switches from the centered empty state to chat view.
+        if self.state_stack.currentIndex() == 0:
+            self.show_active_state()
 
         # History passed to the agent contains
         # only the conversation before this question.
@@ -1435,11 +1507,7 @@ class AssistantPage(QWidget):
 
         self.remove_thinking_message()
 
-        self.add_message(
-            answer,
-            "assistant",
-            tool,
-        )
+        self.type_out_message(answer, tool)
 
         self.history.append(
             {
@@ -1453,6 +1521,46 @@ class AssistantPage(QWidget):
         self.status_message(
             ""
         )
+
+    def type_out_message(self, answer, tool):
+        # Add the bubble empty, then reveal the text a few characters at a
+        # time for a live "typing" feel. Markdown is only applied at the end
+        # so partial ** markers don't flash while typing.
+        row_widget = self.add_message("", "assistant", tool)
+        label = getattr(row_widget, "message_label", None)
+
+        if label is None:
+            return
+
+        label.setTextFormat(Qt.PlainText)
+
+        self._type_full_text = answer
+        self._type_label = label
+        self._type_index = 0
+
+        # Speed: characters revealed per tick. Higher = faster.
+        self._type_step = max(1, len(answer) // 90)
+
+        self._type_timer = QTimer(self)
+        self._type_timer.setInterval(18)
+        self._type_timer.timeout.connect(self._type_tick)
+        self._type_timer.start()
+
+    def _type_tick(self):
+        self._type_index += self._type_step
+
+        if self._type_index >= len(self._type_full_text):
+            # Finished: show the complete text, restore Markdown rendering.
+            self._type_label.setTextFormat(Qt.MarkdownText)
+            self._type_label.setText(self._type_full_text)
+            self._type_timer.stop()
+            self._type_timer.deleteLater()
+        else:
+            self._type_label.setText(
+                self._type_full_text[: self._type_index]
+            )
+
+        self.scroll_to_bottom()
 
     # --------------------------------------------------
     # Agent failed

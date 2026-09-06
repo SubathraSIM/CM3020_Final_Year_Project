@@ -1,1419 +1,161 @@
-* {
-    font-family: "Segoe UI";
-}
-
-QMainWindow {
-    background-color: #EEF3FB;
-}
-
-QWidget {
-    color: #0F172A;
-}
-
-QLabel {
-    color: #0F172A;
-    background-color: transparent;
-}
-
-
-/* =========================================
-   LOGIN AND REGISTRATION
-   ========================================= */
-
-#appCard {
-    background-color: transparent;
-}
-
-#brandPanel {
-    background-color: #05080B;
-    border-top-left-radius: 24px;
-    border-bottom-left-radius: 24px;
-}
-
-#brandName {
-    color: #FFFFFF;
-    font-size: 40px;
-    font-weight: bold;
-}
-
-#brandTagline {
-    color: #93A4B3;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#formPanel {
-    background-color: #FFFFFF;
-    border-top-right-radius: 24px;
-    border-bottom-right-radius: 24px;
-}
-
-#formTitle {
-    color: #0F172A;
-    font-size: 27px;
-    font-weight: bold;
-}
-
-#formSubtitle {
-    color: #64748B;
-    font-size: 14px;
-}
-
-#fieldLabel {
-    color: #334155;
-    font-size: 13px;
-    font-weight: bold;
-}
-
-QLineEdit {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 2px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 10px 14px;
-    font-size: 13px;
-}
-
-QLineEdit:focus {
-    background-color: #F5F8FF;
-    border: 2px solid #2563EB;
-}
-
-#primaryButton {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 12px;
-    padding: 10px 14px;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-#primaryButton:hover {
-    background-color: #1D4ED8;
-}
-
-#primaryButton:pressed {
-    background-color: #1E40AF;
-}
-
-#primaryButton:disabled {
-    background-color: #94A3B8;
-    color: #E2E8F0;
-}
-
-#secondaryButton {
-    background-color: transparent;
-    color: #2563EB;
-    border: 2px solid #2563EB;
-    border-radius: 12px;
-    padding: 9px 14px;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-#secondaryButton:hover {
-    background-color: #EFF4FF;
-}
-
-#secondaryButton:pressed {
-    background-color: #DBE7FF;
-}
-
-#dividerLine {
-    background-color: #E2E8F0;
-    border: none;
-}
-
-#dividerLabel {
-    color: #94A3B8;
-    font-size: 12px;
-}
-
-/* Compact pre-login language selector */
-#loginLanguageCombo {
-    background-color: #EAF2FF;
-    color: #2563EB;
-    border: 1px solid #BFDBFE;
-    border-radius: 9px;
-    padding: 6px 4px 6px 26px;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-#loginLanguageCombo:hover {
-    background-color: #DBEAFE;
-    border: 1px solid #93C5FD;
-}
-
-#loginLanguageCombo:focus {
-    background-color: #DBEAFE;
-    border: 1px solid #60A5FA;
-}
-
-#loginLanguageCombo::drop-down {
-    width: 16px;
-    border: none;
-}
-
-#loginLanguageCombo QAbstractItemView {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 1px solid #BFDBFE;
-    border-radius: 8px;
-    selection-background-color: #DBEAFE;
-    selection-color: #1D4ED8;
-    outline: none;
-    padding: 4px;
-}
-
-
-/* =========================================
-   STATUS MESSAGES
-   ========================================= */
-
-#statusMessage {
-    border-radius: 10px;
-    padding: 8px 11px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#statusMessage[statusType="error"] {
-    background-color: #FEE2E2;
-    color: #B91C1C;
-    border: 1px solid #FECACA;
-}
-
-#statusMessage[statusType="success"] {
-    background-color: #DCFCE7;
-    color: #166534;
-    border: 1px solid #BBF7D0;
-}
-
-
-/* =========================================
-   HOME PAGE
-   ========================================= */
-
-#homeContent {
-    background-color: #F8FAFC;
-}
-
-
-/* ---------- Sidebar ---------- */
-
-#sideBar {
-    background-color: #05080B;
-    border: none;
-}
-
-#navButton {
-    background-color: transparent;
-    color: #CBD5E1;
-    border: none;
-    border-radius: 12px;
-    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI";
-    font-weight: bold;
-}
-
-#navButton[expanded="false"] {
-    text-align: center;
-    padding: 0;
-    font-size: 20px;
-}
-
-#navButton[expanded="true"] {
-    text-align: left;
-    padding-left: 18px;
-    font-size: 14px;
-}
-
-#navButton:hover {
-    background-color: #172554;
-    color: #FFFFFF;
-}
-
-#navButton[active="true"] {
-    background-color: #2563EB;
-    color: #FFFFFF;
-}
-
-
-/* ---------- Home header ---------- */
-
-#homeBrand {
-    color: #0F172A;
-    font-size: 23px;
-    font-weight: bold;
-}
-
-#welcomeLabel {
-    color: #475569;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-
-/* ---------- Home hero ---------- */
-
-#heroCard {
-    background-color: #172554;
-    border: 1px solid #1E3A8A;
-    border-radius: 24px;
-}
-
-#heroEyebrow {
-    color: #93C5FD;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#heroTitle {
-    color: #FFFFFF;
-    font-size: 31px;
-    font-weight: bold;
-}
-
-#heroDescription {
-    color: #CBD5E1;
-    font-size: 14px;
-}
-
-#startCheckInButton {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border: 1px solid #60A5FA;
-    border-radius: 13px;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-#startCheckInButton:hover {
-    background-color: #3B82F6;
-}
-
-#startCheckInButton:pressed {
-    background-color: #1E40AF;
-}
-
-#privacyNote {
-    color: #94A3B8;
-    font-size: 11px;
-}
-
-
-/* ---------- Feature cards ---------- */
-
-#sectionTitle {
-    color: #0F172A;
-    font-size: 19px;
-    font-weight: bold;
-}
-
-#featureCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 18px;
-}
-
-#featureCard:hover {
-    background-color: #F8FAFF;
-    border: 1px solid #93C5FD;
-}
-
-#featureTitle {
-    color: #0F172A;
-    font-size: 15px;
-    font-weight: bold;
-}
-
-#featureDescription {
-    color: #64748B;
-    font-size: 12px;
-}
-
-#homeTime {
-    color: #0F172A;
-    font-size: 36px;
-    font-weight: bold;
-}
-
-#QComboBox {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 2px solid #CBD5E1;
-    border-radius: 10px;
-    padding: 7px 12px;
-    font-size: 13px;
-}
-
-#QComboBox:hover {
-    border: 2px solid #93C5FD;
-}
-
-#QComboBox:focus {
-    border: 2px solid #2563EB;
-}
-
-#QComboBox::drop-down {
-    width: 30px;
-    border: none;
-}
-
-#QComboBox QAbstractItemView {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 1px solid #CBD5E1;
-    selection-background-color: #DBEAFE;
-    selection-color: #1E3A8A;
-    outline: none;
-}
-
-/* =========================================
-   CONSENT DIALOG
-   ========================================= */
-
-QDialog {
-    background-color: #EEF3FB;
-}
-
-#consentCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 24px;
-}
-
-#consentTitle {
-    color: #0F172A;
-    font-size: 27px;
-    font-weight: bold;
-}
-
-#consentSubtitle {
-    color: #64748B;
-    font-size: 14px;
-}
-
-#disclaimerText {
-    background-color: #F8FAFC;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    border-radius: 14px;
-    padding: 14px;
-    font-size: 13px;
-}
-
-#consentCheckBox {
-    color: #334155;
-    font-size: 13px;
-}
-
-QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-}
-
-QCheckBox::indicator:unchecked {
-    background-color: #FFFFFF;
-    border: 2px solid #CBD5E1;
-    border-radius: 4px;
-}
-
-QCheckBox::indicator:checked {
-    background-color: #2563EB;
-    border: 2px solid #2563EB;
-    border-radius: 4px;
-}
-
-
-/* =========================================
-   THANK-YOU DIALOG
-   ========================================= */
-
-#thankYouCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 24px;
-}
-
-#thankYouTitle {
-    color: #0F172A;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-#thankYouText {
-    color: #64748B;
-    font-size: 13px;
-}
-
-/* =========================================
-   CHECK-IN PAGE
-   ========================================= */
-
-#checkInPageContent,
-#processingPage,
-#resultPage {
-    background-color: #F8FAFC;
-}
-
-#checkInPageTitle {
-    color: #64748B;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-#checkInIntroTitle,
-#resultPageTitle {
-    color: #0F172A;
-    font-size: 24px;
-    font-weight: bold;
-}
-
-#checkInIntroText {
-    color: #64748B;
-    font-size: 13px;
-}
-
-
-/* ---------- Recording and result cards ---------- */
-
-#videoCaptureCard,
-#checkInLowerCard,
-#transcriptCard,
-#resultSummaryCard,
-#resultScoreCard,
-#recommendationCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 18px;
-}
-
-#videoPreviewStack {
-    background-color: #0F172A;
-    border: 1px solid #CBD5E1;
-}
-
-#videoPlaceholder,
-#videoWidget {
-    background-color: #0F172A;
-    border: none;
-}
-
-#videoPreviewText {
-    color: #CBD5E1;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-#captureCardTitle {
-    color: #0F172A;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-#captureCardText {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#waveformWidget {
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-}
-
-#transcriptEditor {
-    background-color: #F8FAFC;
-    color: #334155;
-    border: 1px solid #D7E1EC;
-    border-radius: 12px;
-    padding: 11px;
-    font-size: 12px;
-}
-
-#transcriptEditor:focus {
-    background-color: #FFFFFF;
-    border: 2px solid #2563EB;
-}
-
-#transcriptEditor[readOnly="true"] {
-    color: #64748B;
-}
-
-#recordingStatus {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#recordingTimeSmall {
-    color: #2563EB;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-
-/* ---------- Media controls ---------- */
-
-#recordButton,
-#playMediaButton,
-#audioPlayButton {
-    background-color: #EFF6FF;
-    color: #2563EB;
-    border: 1px solid #93C5FD;
-    border-radius: 11px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#recordButton:hover,
-#playMediaButton:hover,
-#audioPlayButton:hover {
-    background-color: #DBEAFE;
-}
-
-#recordButton:pressed,
-#playMediaButton:pressed,
-#audioPlayButton:pressed {
-    background-color: #BFDBFE;
-}
-
-#recordButton[locked="true"],
-#playMediaButton:disabled,
-#audioPlayButton:disabled {
-    background-color: #F1F5F9;
-    color: #94A3B8;
-    border: 1px solid #E2E8F0;
-}
-
-
-/* ---------- Bottom actions ---------- */
-
-#checkInActionCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 14px;
-}
-
-#checkInInformation {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#captureStatus {
-    background-color: #FEE2E2;
-    color: #B91C1C;
-    border: 1px solid #FECACA;
-    border-radius: 8px;
-    padding: 6px 9px;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-#uploadCheckInButton {
-    background-color: #FFFFFF;
-    color: #2563EB;
-    border: 1px solid #93C5FD;
-    border-radius: 11px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#uploadCheckInButton:hover {
-    background-color: #EFF6FF;
-}
-
-#deleteCheckInButton {
-    background-color: #FFFFFF;
-    color: #DC2626;
-    border: 1px solid #FCA5A5;
-    border-radius: 11px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#deleteCheckInButton:hover {
-    background-color: #FEF2F2;
-}
-
-#submitCheckInButton {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 11px;
-    font-size: 13px;
-    font-weight: bold;
-}
-
-#submitCheckInButton:hover {
-    background-color: #1D4ED8;
-}
-
-#submitCheckInButton:pressed {
-    background-color: #1E40AF;
-}
-
-#submitCheckInButton:disabled {
-    background-color: #94A3B8;
-    color: #E2E8F0;
-}
-
-
-/* ---------- Upload dialog ---------- */
-
-#uploadCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 20px;
-}
-
-#uploadTitle {
-    color: #0F172A;
-    font-size: 24px;
-    font-weight: bold;
-}
-
-#uploadNote {
-    color: #64748B;
-    font-size: 12px;
-}
-
-#uploadFileLabel {
-    background-color: #F8FAFC;
-    color: #64748B;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 12px;
-}
-
-#uploadTypeCombo {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 2px solid #CBD5E1;
-    border-radius: 11px;
-    padding-left: 14px;
-    padding-right: 38px;
-    font-size: 13px;
-    min-width: 220px;
-}
-
-#uploadTypeCombo:hover {
-    border: 2px solid #93C5FD;
-}
-
-#uploadTypeCombo:focus {
-    border: 2px solid #2563EB;
-}
-
-#uploadTypeCombo::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 36px;
-    background-color: #EFF6FF;
-    border-left: 1px solid #D7E1EC;
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-}
-
-#uploadTypeCombo QAbstractItemView {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 1px solid #CBD5E1;
-    selection-background-color: #DBEAFE;
-    selection-color: #1E3A8A;
-    outline: none;
-    padding: 6px;
-}
-
-#uploadChooseButton {
-    background-color: #FFFFFF;
-    color: #2563EB;
-    border: 2px solid #2563EB;
-    border-radius: 11px;
-    font-size: 13px;
-    font-weight: bold;
-}
-
-#uploadChooseButton:hover {
-    background-color: #EFF6FF;
-}
-
-
-/* ---------- Processing ---------- */
-
-#processingCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 24px;
-    min-width: 460px;
-    max-width: 460px;
-}
-
-#processingTitle {
-    color: #0F172A;
-    font-size: 24px;
-    font-weight: bold;
-}
-
-#processingMessage {
-    color: #2563EB;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-#processingNote {
-    color: #64748B;
-    font-size: 12px;
-}
-
-
-/* ---------- Result ---------- */
-
-#resultPhrase {
-    color: #172554;
-    font-size: 30px;
-    font-weight: bold;
-}
-
-#resultExplanation {
-    color: #475569;
-    font-size: 14px;
-}
-
-#resultReminder {
-    background-color: #EFF6FF;
-    color: #475569;
-    border: 1px solid #DBEAFE;
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 11px;
-}
-
-#scoreLabel,
-#trendLabel {
-    color: #475569;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#scoreCaveat {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#scoreNumber {
-    color: #2563EB;
-    font-size: 48px;
-    font-weight: bold;
-}
-
-#trendRequirement {
-    background-color: #F8FAFC;
-    color: #64748B;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 13px;
-    font-size: 11px;
-}
-
-#recommendationText {
-    background-color: #F8FAFC;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 12px;
-    font-size: 12px;
-}
-
-#wellbeingProgress {
-    background-color: #E2E8F0;
-    color: #0F172A;
-    border: none;
-    border-radius: 8px;
-    min-height: 20px;
-    max-height: 20px;
-    text-align: center;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-#wellbeingProgress::chunk {
-    background-color: #94A3B8;
-    border-radius: 8px;
-}
-
-#wellbeingProgress[zone="high"]::chunk {
-    background-color: #22C55E;
-}
-
-#wellbeingProgress[zone="mid"]::chunk {
-    background-color: #F59E0B;
-}
-
-#wellbeingProgress[zone="low"]::chunk {
-    background-color: #EF4444;
-}
-
-#recommendationItems {
-    background-color: transparent;
-}
-
-#recommendationItem {
-    background-color: #F8FAFC;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    border-left: 4px solid #2563EB;
-    border-radius: 11px;
-    padding: 10px 14px;
-    font-size: 13px;
-}
-
-/* =========================================
-   TRENDS PAGE
-   ========================================= */
-
-#trendsPageContent {
-    background-color: #F8FAFC;
-}
-
-#trendsHeaderName {
-    color: #64748B;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-#trendsPageTitle {
-    color: #0F172A;
-    font-size: 25px;
-    font-weight: bold;
-}
-
-#trendsPageSubtitle {
-    color: #64748B;
-    font-size: 13px;
-}
-
-#trendsCalendarCard,
-#historyPanel {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 18px;
-}
-
-#trendsCardTitle {
-    color: #0F172A;
-    font-size: 15px;
-    font-weight: bold;
-}
-
-#trendsCardNote,
-#calendarLegendText {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#calNavBar {
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-}
-
-#calNavArrow {
-    background-color: transparent;
-    color: #2563EB;
-    border: none;
-    border-radius: 8px;
-    font-size: 20px;
-    font-weight: bold;
-}
-
-#calNavArrow:hover {
-    background-color: #DBEAFE;
-}
-
-#calNavArrow:pressed {
-    background-color: #BFDBFE;
-}
-
-#calNavCombo {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 1px solid #CBD5E1;
-    border-radius: 8px;
-    padding: 5px 8px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#calNavCombo:hover {
-    border: 1px solid #93C5FD;
-}
-
-#calNavCombo:focus {
-    border: 1px solid #2563EB;
-}
-
-#calendarLegendDot {
-    color: #2563EB;
-    font-size: 12px;
-}
-
-#wellbeingCalendar {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: none;
-    font-size: 12px;
-    selection-background-color: #2563EB;
-    selection-color: #FFFFFF;
-}
-
-#wellbeingCalendar QToolButton {
-    background-color: transparent;
-    color: #0F172A;
-    border: none;
-    border-radius: 8px;
-    padding: 7px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#wellbeingCalendar QToolButton:hover {
-    background-color: #EFF6FF;
-    color: #2563EB;
-}
-
-#wellbeingCalendar QMenu {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 1px solid #DCE5F0;
-}
-
-#wellbeingCalendar QSpinBox {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    border: 1px solid #CBD5E1;
-    border-radius: 7px;
-    padding: 4px;
-}
-
-#wellbeingCalendar QAbstractItemView {
-    background-color: #FFFFFF;
-    color: #0F172A;
-    selection-background-color: #2563EB;
-    selection-color: #FFFFFF;
-    outline: none;
-}
-
-#historyEmptyState,
-#historySummaryState,
-#historyScrollContent {
-    background-color: #FFFFFF;
-}
-
-#historyScrollArea {
-    background-color: transparent;
-    border: none;
-}
-
-#historyEmptyTitle {
-    color: #0F172A;
-    font-size: 21px;
-    font-weight: bold;
-}
-
-#historyEmptyMessage {
-    color: #64748B;
-    font-size: 13px;
-}
-
-#historySelectedDate {
-    color: #0F172A;
-    font-size: 20px;
-    font-weight: bold;
-}
-
-#historySelectedTime {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#historySummaryCard,
-#historyDetailsCard {
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-radius: 15px;
-}
-
-#historyPhrase {
-    color: #172554;
-    font-size: 23px;
-    font-weight: bold;
-}
-
-#historyExplanation {
-    color: #475569;
-    font-size: 13px;
-}
-
-#historyInputType {
-    color: #64748B;
-    font-size: 11px;
-}
-
-#historyScoreItem {
-    background-color: #FFFFFF;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 11px;
-}
-
-#historyTranscript {
-    background-color: #FFFFFF;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 12px;
-}
-
-#historyTranscript:focus {
-    border: 1px solid #E2E8F0;
-}
-
-#historyRecommendationContainer {
-    background-color: transparent;
-}
-
-#historyRecommendationItem {
-    background-color: #FFFFFF;
-    color: #334155;
-    border: 1px solid #E2E8F0;
-    border-left: 4px solid #2563EB;
-    border-radius: 10px;
-    padding: 9px 12px;
-    font-size: 12px;
-}
-
-#trendHistoryProgress {
-    background-color: #E2E8F0;
-    color: #0F172A;
-    border: none;
-    border-radius: 8px;
-    min-height: 20px;
-    max-height: 20px;
-    text-align: center;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-#trendHistoryProgress::chunk {
-    background-color: #94A3B8;
-    border-radius: 8px;
-}
-
-#trendHistoryProgress[zone="high"]::chunk {
-    background-color: #22C55E;
-}
-
-#trendHistoryProgress[zone="mid"]::chunk {
-    background-color: #F59E0B;
-}
-
-#trendHistoryProgress[zone="low"]::chunk {
-    background-color: #EF4444;
-}
-
-#inputUsedLabel {
-    color: #94A3B8;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#trendsGraphCard {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 18px;
-}
-
-/* =========================================
-   SOLACE ASSISTANT
-   ========================================= */
-
-#assistantContent {
-    background-color: #F8FAFC;
-}
-
-
-/* ---------- Hero ---------- */
-
-#assistantTitle {
-    background-color: transparent;
-    color: #FFFFFF;
-    font-size: 27px;
-    font-weight: bold;
-}
-
-#assistantSubtitle {
-    background-color: transparent;
-    color: #D7E3F4;
-    font-size: 13px;
-}
-
-#assistantPrivateNote {
-    background-color: transparent;
-    color: #93C5FD;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-
-/* ---------- Clear chat ---------- */
-
-#assistantClearButton {
-    background-color: #1E293B;
-    color: #F8FAFC;
-    border: 1px solid #475569;
-    border-radius: 11px;
-    padding: 7px 15px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#assistantClearButton:hover {
-    background-color: #334155;
-    border: 1px solid #60A5FA;
-}
-
-#assistantClearButton:pressed {
-    background-color: #0F172A;
-}
-
-#assistantClearButton:disabled {
-    background-color: #334155;
-    color: #94A3B8;
-    border: 1px solid #475569;
-}
-
-
-/* ---------- Chat canvas ---------- */
-
-#assistantChatScroll {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 20px;
-}
-
-#assistantChatContainer {
-    background-color: #FFFFFF;
-}
-
-#assistantMessageRow {
-    background-color: transparent;
-}
-
-
-/* ---------- User message ---------- */
-
-#assistantUserMessage {
-    background-color: #2563EB;
-    border: 1px solid #2563EB;
-    border-radius: 17px;
-}
-
-#assistantUserMessageText {
-    background-color: transparent;
-    color: #FFFFFF;
-    font-size: 12px;
-}
-
-
-/* ---------- Solace message ---------- */
-
-#assistantBotMessage {
-    background-color: #F8FAFC;
-    border: 1px solid #DCE5F0;
-    border-radius: 17px;
-}
-
-#assistantBotMessageText {
-    background-color: transparent;
-    color: #1E293B;
-    font-size: 12px;
-}
-
-
-/* ---------- In-chat thinking indicator ---------- */
-
-#assistantThinkingMessage {
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-radius: 17px;
-}
-
-#assistantThinkingText {
-    background-color: transparent;
-    color: #94A3B8;
-    font-size: 11px;
-    font-style: italic;
-}
-
-
-/* ---------- Agent tool information ---------- */
-
-#assistantToolLabel {
-    background-color: #EEF4FF;
-    color: #64748B;
-    border: 1px solid #DBEAFE;
-    border-radius: 8px;
-    padding: 4px 7px;
-    font-size: 9px;
-    font-weight: bold;
-}
-
-
-/* ---------- Suggested questions ---------- */
-
-#assistantSuggestionsTitle {
-    color: #334155;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#assistantSuggestionButton {
-    background-color: #FFFFFF;
-    color: #1D4ED8;
-    border: 1px solid #BFDBFE;
-    border-radius: 13px;
-    padding: 9px 11px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-#assistantSuggestionButton:hover {
-    background-color: #EFF6FF;
-    color: #1E40AF;
-    border: 1px solid #60A5FA;
-}
-
-#assistantSuggestionButton:pressed {
-    background-color: #DBEAFE;
-}
-
-#assistantSuggestionButton:disabled {
-    background-color: #F8FAFC;
-    color: #94A3B8;
-    border: 1px solid #E2E8F0;
-}
-
-
-/* ---------- Composer ---------- */
-
-#assistantComposer {
-    background-color: #FFFFFF;
-    border: 1px solid #DCE5F0;
-    border-radius: 18px;
-}
-
-#assistantQuestionInput {
-    background-color: #F8FAFC;
-    color: #0F172A;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 9px 13px;
-    font-size: 12px;
-}
-
-#assistantQuestionInput:hover {
-    border: 1px solid #BFDBFE;
-}
-
-#assistantQuestionInput:focus {
-    background-color: #FFFFFF;
-    border: 2px solid #2563EB;
-}
-
-#assistantQuestionInput:disabled {
-    background-color: #F1F5F9;
-    color: #94A3B8;
-}
-
-
-/* ---------- Send button ---------- */
-
-#assistantSendButton {
-    background-color: #2563EB;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 12px;
-    padding: 10px 16px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-#assistantSendButton:hover {
-    background-color: #1D4ED8;
-}
-
-#assistantSendButton:pressed {
-    background-color: #1E40AF;
-}
-
-#assistantSendButton:disabled {
-    background-color: #94A3B8;
-    color: #E2E8F0;
-}
-
-
-/* ---------- Processing status ---------- */
-
-#assistantStatus {
-    background-color: #EFF6FF;
-    color: #1D4ED8;
-    border: 1px solid #BFDBFE;
-    border-radius: 9px;
-    padding: 5px 9px;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-
-/* ---------- Disclaimer ---------- */
-
-#assistantDisclaimer {
-    background-color: transparent;
-    color: #94A3B8;
-    font-size: 10px;
-}
-
-
-/* ---------- Scrollbar ---------- */
-
-#assistantChatScroll QScrollBar:vertical {
-    background-color: transparent;
-    width: 9px;
-    margin: 10px 3px 10px 0;
-}
-
-#assistantChatScroll QScrollBar::handle:vertical {
-    background-color: #CBD5E1;
-    border-radius: 4px;
-    min-height: 32px;
-}
-
-#assistantChatScroll QScrollBar::handle:vertical:hover {
-    background-color: #94A3B8;
-}
-
-#assistantChatScroll QScrollBar::add-line:vertical,
-#assistantChatScroll QScrollBar::sub-line:vertical {
-    height: 0;
-}
-
-#assistantChatScroll QScrollBar::add-page:vertical,
-#assistantChatScroll QScrollBar::sub-page:vertical {
-    background-color: transparent;
-}
+/* Solace · navy wellbeing, version 2. Canonical presentation tokens are documented in DESIGN.md.
+   Qt stylesheets, not browser CSS. All assets are local. */
+* { font-family: "Segoe UI", "Noto Sans", sans-serif; font-size: 13px; }
+QMainWindow, QDialog { background: #F5F7FB; }
+QWidget { color: #253550; }
+QLabel { background: transparent; border: none; }
+QToolTip { background: #182C4D; color: white; border: 0; padding: 8px; }
+QScrollArea, QStackedWidget { border: none; background: transparent; }
+#homeContent, #checkInPageContent, #processingPage, #resultPage, #trendsPageContent, #assistantContent { background: #F5F7FB; }
+#sideBar { background: #182C4D; border: none; }
+#sidebarBrand { color: #F0F7EF; font-size: 34px; font-weight: 600; padding-left: 12px; }
+#sidebarEyebrow { color: #AFCFC5; font-size: 10px; font-weight: 600; padding-left: 12px; }
+QPushButton { background: #FFFFFF; border: 1px solid #D1DDEE; border-radius: 9px; padding: 8px 14px; font-weight: 600; color: #3F5D8A; }
+QPushButton:hover { background: #EEF3FB; border-color: #8CA6D0; }
+QPushButton:pressed { background: #DDE7F7; }
+QPushButton:focus { border: 2px solid #7193CE; }
+QPushButton:disabled { background: #E9EDF4; color: #8797AB; border-color: #E0E6EF; }
+#navButton { text-align: left; background: transparent; border: 1px solid transparent; color: #DCE6F7; padding: 10px 12px; font-size: 14px; font-weight: 700; }
+#navButton:hover { background: #253D61; }
+#navButton[active="true"] { background: #345586; color: white; border: 1px solid #42679B; }
+#navButton:focus { border: 2px solid #AFC8F4; }
+#navButton[collapsed="true"] { text-align: center; padding: 10px 0; }
+#navToggle { background: transparent; border: 1px solid transparent; padding: 8px; }
+#navToggle:hover { background: #253D61; }
+#homeBrand { color: #29476F; font-size: 21px; font-weight: 600; }
+#welcomeLabel { color: #6B7990; font-size: 12px; }
+#pageEyebrow { font-size: 12px; color: #6B7990; }
+#heroCard { background: #EDF2FB; border: 1px solid #DEE6F4; border-radius: 14px; }
+#heroEyebrow { font-size: 10px; font-weight: 600; color: #5371A4; }
+#heroTitle { font-family: "Segoe UI Semibold", "Segoe UI", sans-serif; font-size: 34px; font-weight: 600; color: #243D67; }
+#heroDescription { color: #637596; font-size: 15px; }
+#privacyNote, #scoreCaveat, #resultReminder, #processingNote, #assistantPrivateNote, #assistantDisclaimer, #assistantToolLabel { color: #687991; font-size: 11px; }
+#primaryButton, #startCheckInButton, #submitCheckInButton, #assistantSendButton { background: #3E64B4; color: white; border: 1px solid #3E64B4; padding: 8px 18px; }
+#primaryButton:hover, #startCheckInButton:hover, #submitCheckInButton:hover, #assistantSendButton:hover { background: #31549D; }
+#primaryButton:pressed, #startCheckInButton:pressed, #submitCheckInButton:pressed, #assistantSendButton:pressed { background: #24437E; }
+#primaryButton:focus, #startCheckInButton:focus, #submitCheckInButton:focus, #assistantSendButton:focus { border: 2px solid #B0C9F4; }
+#primaryButton:disabled, #submitCheckInButton:disabled, #assistantSendButton:disabled { background: #E1E7F0; color: #8592A8; border-color: #E1E7F0; }
+#sectionTitle { font-size: 21px; font-weight: 600; color: #293F66; }
+#featureTitle, #captureCardTitle, #trendsCardTitle, #resourceTitle { font-size: 15px; font-weight: 600; color: #2B4168; }
+#featureDescription, #captureCardText, #trendsCardNote, #calendarLegendText { font-size: 12px; color: #6B7990; }
+#quickCard, #resourceCard { background: white; border: 1px solid #DFE5EF; border-radius: 12px; text-align: left; padding: 0; }
+#quickCard:hover, #resourceCard:hover { background: #FAFBFE; border-color: #92AAD2; }
+#quickCard:focus, #resourceCard:focus { border: 2px solid #7193CE; }
+#resourceTag { background: #E7EDF9; color: #4C69A1; border-radius: 5px; padding: 6px 8px; font-size: 10px; font-weight: 600; }
+#resourceTag[tone="sand"] { background: #F9EAE2; color: #A0654D; }
+#resourceTag[tone="blue"] { background: #EEEAF9; color: #796397; }
+#resourceLink { color: #4B68AC; font-size: 11px; font-weight: 600; }
+#resourceDialogTitle { font-size: 25px; font-weight: 600; }
+#resourceDialogBody { font-size: 15px; color: #4A5C78; }
+#resourceDialogNote { font-size: 13px; color: #5E6F88; }
+#appCard { background: white; border: 1px solid #DFE5EF; border-radius: 16px; }
+#brandPanel { background: #E8EFFA; border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
+#brandName { font-size: 48px; font-weight: 600; color: #243D67; }
+#brandTagline { font-size: 11px; color: #57729E; }
+#formPanel { background: white; border-top-right-radius: 16px; border-bottom-right-radius: 16px; }
+#formTitle { font-size: 27px; font-weight: 600; }
+#formSubtitle { color: #6B7990; font-size: 13px; }
+#fieldLabel { color: #4D6283; font-size: 12px; font-weight: 600; }
+QLineEdit, QPlainTextEdit, QTextEdit, QComboBox { background: #FBFCFE; color: #2A4165; border: 1px solid #D7E0EF; border-radius: 8px; padding: 8px 12px; selection-background-color: #D2DFF5; selection-color: #182C4D; }
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QComboBox:focus { border: 2px solid #7394C7; background: white; }
+QComboBox { padding-right: 24px; }
+QComboBox::drop-down { border: none; width: 24px; }
+QComboBox QAbstractItemView { background: white; color: #2A4165; selection-background-color: #E2EAF8; selection-color: #182C4D; padding: 4px; }
+#dividerLine { background: #E2E7F0; }
+#dividerLabel { color: #7C889C; font-size: 11px; }
+#statusMessage, #captureStatus, #assistantStatus { border-radius: 6px; padding: 8px; color: #974F56; background: #F8EBEC; }
+#statusMessage[statusType="success"] { background: #E2F0E5; color: #376A4A; }
+#checkInIntroTitle, #resultPageTitle, #trendsPageTitle, #settingsPageTitle, #assistantTitle { font-size: 28px; font-weight: 600; }
+#checkInIntroText, #trendsPageSubtitle, #settingsPageSubtitle, #assistantSubtitle { color: #667892; font-size: 13px; }
+#featureCard, #settingsCard, #videoCaptureCard, #checkInLowerCard, #transcriptCard,
+#resultSummaryCard, #resultScoreCard, #recommendationCard, #processingCard,
+#trendsGraphCard, #trendsCalendarCard, #historyPanel, #historySummaryCard,
+#historyDetailsCard, #assistantComposer, #assistantHeroCard { background: white; border: 1px solid #DFE5EF; border-radius: 12px; }
+#videoPlaceholder, #videoWidget, #videoPreviewStack { background: #EDF2F9; border-radius: 8px; }
+#videoPreviewText { color: #71839F; font-size: 12px; }
+#recordingStatus, #recordingTimeSmall { font-size: 11px; color: #72839D; }
+#recordButton { background: #ECF1FC; color: #4969A4; border-color: #CAD7EF; }
+#recordButton:hover { background: #E1EAF9; }
+#recordButton[locked="true"] { background: #ECEFF5; color: #8B97AA; }
+#checkInActionCard { background: transparent; border: none; }
+#deleteCheckInButton, #deleteAccountButton { color: #A05058; border-color: #E4C5C9; background: #FCF4F4; }
+#deleteCheckInButton:hover, #deleteAccountButton:hover { background: #F4E2E4; }
+#deleteAccountButton:disabled { color: #B99A9F; background: #F3ECEC; border-color: #E5DBDE; }
+#settingsDangerCard { background: #FFFAFA; border: 1px solid #EAD9DB; border-radius: 12px; }
+#dangerTitle, #deleteDialogWarning { color: #A05058; font-size: 15px; font-weight: 600; }
+#processingTitle, #uploadTitle, #consentTitle, #thankYouTitle, #deleteDialogTitle { font-size: 23px; font-weight: 600; }
+#processingMessage, #uploadNote, #uploadFileLabel, #thankYouText, #deleteDialogDetails, #consentSubtitle { color: #6D7F98; font-size: 12px; }
+#consentCard, #uploadCard, #thankYouCard, #deleteAccountDialogCard { background: white; border: 1px solid #DFE5EF; border-radius: 14px; }
+#disclaimerText { color: #526783; font-size: 12px; }
+QCheckBox { spacing: 8px; color: #526783; font-size: 11px; }
+QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #A3B8D9; background: white; }
+QCheckBox::indicator:checked { background: #3E64B4; border: 2px solid #C5D4F0; }
+QCheckBox:focus { outline: none; color: #182C4D; }
+#resultPhrase, #historyPhrase, #historySelectedDate, #historyEmptyTitle { font-size: 24px; font-weight: 600; }
+#resultExplanation, #historyExplanation, #historyEmptyMessage { color: #6E7F95; font-size: 14px; }
+#scoreLabel, #trendLabel { font-size: 14px; font-weight: 600; }
+#trendRequirement { color: #7889A2; background: #F0F4FA; padding: 14px; border-radius: 8px; font-size: 12px; }
+QProgressBar { background: #EAF0F7; border: none; border-radius: 6px; min-height: 20px; text-align: center; color: #253550; }
+QProgressBar::chunk { background: #8DBD9C; border-radius: 6px; }
+QProgressBar[zone="high"]::chunk { background: #8DBD9C; }
+QProgressBar[zone="mid"]::chunk { background: #DFC687; }
+QProgressBar[zone="low"]::chunk { background: #D89DA3; }
+#recommendationItem, #historyRecommendationItem { background: #EFF3FB; border: 1px solid #DCE5F4; border-radius: 8px; color: #5B7091; padding: 12px; font-size: 12px; }
+#recCard { background: #F4F8FE; border: 1px solid #D6E2F4; border-radius: 14px; }
+#recCard:hover { background: #ECF3FD; border-color: #9FBDE8; }
+#recCard[tone="mint"] { background: #EEF7F1; border-color: #CDE6D6; }
+#recCard[tone="mint"]:hover { background: #E4F1E9; border-color: #A9D3B8; }
+#recCard[tone="sand"] { background: #FBF2EC; border-color: #F0DDD0; }
+#recCard[tone="sand"]:hover { background: #F6E8DD; border-color: #E3C3AC; }
+#recCardNumber { font-size: 20px; font-weight: 700; color: #FFFFFF; background: #4B68AC; border-radius: 22px; }
+#recCardNumber[tone="mint"] { background: #3F8A63; }
+#recCardNumber[tone="sand"] { background: #B06A45; }
+#recCardText { font-size: 15px; font-weight: 500; color: #3B527A; qproperty-alignment: AlignCenter; }
+#historyEmptyState, #historySummaryState, #historyScrollContent, #historyScrollArea, #historyRecommendationContainer, #recommendationItems { background: transparent; }
+#historySelectedTime, #historyInputType, #inputUsedLabel { font-size: 11px; color: #7888A0; }
+#wellbeingCalendar { background: white; border: none; }
+#wellbeingCalendar QAbstractItemView { background: white; alternate-background-color: white; color: #446085; selection-background-color: #DFE9F9; selection-color: #2E4A72; border: none; font-size: 12px; }
+#calNavCombo { padding: 4px 10px; font-size: 12px; }
+#calNavArrow { padding: 3px; }
+#assistantHeroCard { background: #EAF0FA; }
+#assistantHeroPrompt { font-size: 30px; font-weight: 600; color: #29476F; }
+#assistantChatScroll, #assistantChatContainer, #assistantMessageRow { background: transparent; border: none; }
+#assistantUserMessage { background: #E5ECFA; border: 1px solid #D4DFF3; border-radius: 12px; }
+#assistantBotMessage, #assistantThinkingMessage { background: white; border: 1px solid #E2E7F0; border-radius: 12px; }
+#assistantUserMessageText, #assistantBotMessageText, #assistantThinkingText { color: #415A7D; font-size: 13px; }
+#assistantSuggestionsTitle { font-size: 11px; color: #7B8BA1; }
+#assistantSuggestionButton { background: white; color: #5B7091; font-size: 11px; padding: 6px 10px; }
+#assistantSuggestionButton:hover { background: #ECF2FC; }
+#assistantQuestionInput { border: none; background: transparent; }
+#assistantQuestionInput:focus { border: 1px solid #7A98C9; }
+QScrollBar:vertical { background: #EFF2F8; width: 10px; margin: 0; }
+QScrollBar::handle:vertical { background: #BDCBE0; min-height: 30px; border-radius: 5px; }
+QScrollBar::handle:vertical:hover { background: #91A8CC; }
+QScrollBar::handle:vertical:pressed { background: #6D8BB6; }
+QScrollBar:horizontal { background: #EFF2F8; height: 10px; margin: 0; }
+QScrollBar::handle:horizontal { background: #BDCBE0; min-width: 30px; border-radius: 5px; }
+QScrollBar::handle:horizontal:hover { background: #91A8CC; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+
+QCheckBox::indicator:checked { image: url(__SOLACE_IMAGES__/check_white.png); }
+QComboBox::down-arrow { image: url(__SOLACE_IMAGES__/chevron_down.png); width: 12px; height: 12px; }
+
+QTabWidget#captureTabs::pane { border: none; background: transparent; }
+QTabBar::tab { background: #E9EEF7; color: #697C9B; border: 1px solid #DFE5EF; border-radius: 8px; padding: 10px 28px; margin-right: 8px; margin-bottom: 10px; font-weight: 600; }
+QTabBar::tab:selected { background: #365DA2; color: #FFFFFF; border-color: #365DA2; }
+QTabBar::tab:hover:!selected { background: #DCE6F7; }
+QTabBar::tab:focus { border: 2px solid #90ADE0; }
+
+QTabWidget, QTabBar { background: transparent; border: none; }
+QTabWidget::pane { background: transparent; border: none; top: 0px; }
+QTabWidget::tab-bar { left: 0px; }
+QSplitter#captureWorkspace::handle { background: #F5F7FB; }
+#videoPreviewStack, #videoPlaceholder { background: #E8EFFA; border-radius: 8px; }
+#profileStatus { color: #496A9A; font-size: 12px; }
+#homeContent #heroTitle { font-size: 29px; }
+#loginLanguageCombo { min-width: 110px; padding-left: 12px; padding-right: 32px; }
+
+#profilePanel {background: #FFFFFF; border: 1px solid #DFE5EF; border-radius: 12px;}
+#preferencesPanel { background: transparent; }
+QTabWidget::pane, QTabWidget QScrollArea, QTabWidget QScrollArea > QWidget > QWidget { background: transparent; }

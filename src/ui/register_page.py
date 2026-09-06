@@ -1,3 +1,4 @@
+from src.ui.account_widgets import PasswordEdit
 import re
 
 from PySide6.QtCore import Qt
@@ -7,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.ui.login_page import BrandPanel
+from src.ui.ui_components import FloatCard
 from src.ui.translations import ENGLISH_TEXT, get_text
 
 
@@ -28,7 +30,7 @@ REGISTER_TEXT = {
     "create_account": "Create account",
     "back_login": "Back to login",
 
-    "register_empty": "Please complete all fields.",
+    "register_empty": "Enter a username, password and password confirmation.",
 
     "password_weak":
         "Password must contain at least 8 characters, uppercase, lowercase, number and symbol.",
@@ -50,7 +52,7 @@ class RegisterPage(QWidget):
         card = QFrame()
         card.setObjectName("appCard")
         card.setAttribute(Qt.WA_StyledBackground, True)
-        card.setFixedSize(940, 560)
+        card.setFixedSize(940, 630)
 
         self.brand = BrandPanel()
         form = self.build_form()
@@ -60,14 +62,15 @@ class RegisterPage(QWidget):
         card_layout.setSpacing(0)
         card_layout.addWidget(self.brand, 47)
         card_layout.addWidget(form, 53)
+        self.card_host = FloatCard(card)
 
         row = QHBoxLayout()
         row.addStretch()
-        row.addWidget(card)
+        row.addWidget(self.card_host)
         row.addStretch()
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 50, 60, 60)
+        layout.setContentsMargins(24, 24, 24, 24)
         layout.addStretch()
         layout.addLayout(row)
         layout.addStretch()
@@ -123,7 +126,7 @@ class RegisterPage(QWidget):
         )
 
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(56, 20, 56, 20)
+        layout.setContentsMargins(44, 24, 44, 24)
         layout.setSpacing(0)
 
         layout.addWidget(self.heading)
@@ -166,7 +169,7 @@ class RegisterPage(QWidget):
 
     @staticmethod
     def field(password=False):
-        widget = QLineEdit()
+        widget = PasswordEdit() if password else QLineEdit()
         widget.setFixedHeight(44)
 
         if password:
@@ -184,7 +187,7 @@ class RegisterPage(QWidget):
         self.heading.setText(self.t("register_title"))
         self.subtitle.setText(self.t("register_subtitle"))
 
-        self.name_label.setText(self.t("full_name"))
+        self.name_label.setText(self.t("register_name_optional"))
         self.name_input.setPlaceholderText(self.t("full_name_placeholder"))
 
         self.username_label.setText(self.t("username"))
@@ -224,7 +227,7 @@ class RegisterPage(QWidget):
         ]
 
         for widget, size in widgets:
-            widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+            widget.setStyleSheet(f"font-size:{max(size, 12)}px;" if tamil else "")
 
     @staticmethod
     def valid_password(password):
@@ -254,3 +257,7 @@ class RegisterPage(QWidget):
         self.username_input.clear()
         self.password_input.clear()
         self.confirm_password_input.clear()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.card_host.play()

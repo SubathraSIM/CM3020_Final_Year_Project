@@ -1,14 +1,24 @@
+from src.ui.profile_panel import ProfilePanel
+from src.ui.ui_components import scroll_page, float_in
+from src.ui.account_widgets import add_avatar
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
+    QTabWidget, QCheckBox, QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout,
     QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 )
 
 from src.ui.home_page import HoverSidebar
-from src.ui.translations import get_text
+from src.ui.translations import ENGLISH_TEXT, get_text
+
+ENGLISH_TEXT.update({
+    "logout_dialog_title": "Log out of Solace?",
+    "logout_dialog_message": "You'll need to sign in again to continue. Your current chat will be cleared.",
+    "logout_cancel": "Cancel",
+    "logout_confirm": "Log out",
+})
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGES = ROOT / "src" / "images"
@@ -37,10 +47,16 @@ class SettingsPage(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        self.content = self.build_content()
         layout.addWidget(self.sidebar)
-        layout.addWidget(self.build_content(), 1)
+        layout.addWidget(self.content, 1)
 
         self.set_language("English")
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.sidebar.set_expanded(HoverSidebar._shared_expanded)
+        float_in(self.content)
 
     def set_active_sidebar(self):
         buttons = (
@@ -82,35 +98,46 @@ class SettingsPage(QWidget):
         cards.setColumnStretch(1, 1)
 
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(50, 28, 50, 36)
+        layout.setContentsMargins(28, 18, 32, 30)
         layout.setSpacing(0)
         layout.addLayout(self.build_header())
-        layout.addSpacing(24)
+        layout.addSpacing(8)
         layout.addWidget(self.title)
         layout.addSpacing(5)
         layout.addWidget(self.subtitle)
-        layout.addSpacing(24)
-        layout.addLayout(cards)
-        layout.addStretch()
+        layout.addSpacing(8)
+        preferences=QWidget()
+        preferences.setObjectName("preferencesPanel")
+        prefs_layout=QVBoxLayout(preferences)
+        prefs_layout.setContentsMargins(0, 4, 0, 0)
+        prefs_layout.addLayout(cards)
+        prefs_layout.addStretch()
+        self.profile_panel=ProfilePanel()
+        self.account_tabs=QTabWidget()
+        self.account_tabs.tabBar().setDrawBase(False)
+        self.account_tabs.addTab(scroll_page(self.profile_panel), "Profile")
+        self.account_tabs.addTab(scroll_page(preferences), "Preferences")
+        layout.addWidget(self.account_tabs, 1)
 
         return content
 
     def build_header(self):
         heart = QLabel()
-        heart.setFixedSize(30, 30)
-        heart.setAlignment(Qt.AlignCenter)
+        heart.setFixedSize(42, 42)
+        heart.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         heart.setPixmap(QPixmap(str(IMAGES / "heart.png")).scaled(
-            28, 28, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation
         ))
 
         brand = QLabel("Solace")
         brand.setObjectName("homeBrand")
 
         layout = QHBoxLayout()
-        layout.setSpacing(7)
+        layout.setSpacing(2)
         layout.addWidget(heart)
         layout.addWidget(brand)
         layout.addStretch()
+        add_avatar(layout)
         return layout
 
     def build_language_card(self):
@@ -189,9 +216,9 @@ class SettingsPage(QWidget):
 
     def build_delete_account_card(self):
         card = QFrame()
-        card.setObjectName("dangerCard")
+        card.setObjectName("settingsCard")
         card.setAttribute(Qt.WA_StyledBackground, True)
-        card.setMinimumHeight(155)
+        card.setMinimumHeight(220)
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
         self.delete_heading = QLabel()
@@ -248,6 +275,9 @@ class SettingsPage(QWidget):
         self.language_combo.setCurrentIndex(index)
         self.language_combo.blockSignals(False)
 
+        self.profile_panel.set_language(language)
+        self.account_tabs.setTabText(0,self.t("profile_tab"))
+        self.account_tabs.setTabText(1,self.t("preferences_tab"))
         self.tamil_fonts()
 
     def tamil_fonts(self):
@@ -263,7 +293,7 @@ class SettingsPage(QWidget):
         ]
 
         for widget, size in sizes:
-            widget.setStyleSheet(f"font-size:{size}px;" if tamil else "")
+            widget.setStyleSheet(f"font-size:{max(size, 12)}px;" if tamil else "")
 
 
 class DeleteAccountDialog(QDialog):
@@ -319,6 +349,60 @@ class DeleteAccountDialog(QDialog):
         layout.addWidget(warning)
         layout.addWidget(details)
         layout.addWidget(self.confirm_checkbox)
+        layout.addStretch()
+        layout.addLayout(buttons)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(16, 16, 16, 16)
+        outer.addWidget(card)
+
+class LogoutDialog(QDialog):
+    def __init__(self, language="English", parent=None):
+        super().__init__(parent)
+        self.setModal(True)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setFixedSize(440, 240)
+
+        card = QFrame()
+        card.setObjectName("thankYouCard")
+        card.setAttribute(Qt.WA_StyledBackground, True)
+
+        title = QLabel(get_text(language, "logout_dialog_title"))
+        title.setObjectName("thankYouTitle")
+        title.setAlignment(Qt.AlignCenter)
+
+        message = QLabel(get_text(language, "logout_dialog_message"))
+        message.setObjectName("thankYouText")
+        message.setAlignment(Qt.AlignCenter)
+        message.setWordWrap(True)
+
+        cancel = QPushButton(get_text(language, "logout_cancel"))
+        cancel.setObjectName("secondaryButton")
+        cancel.setFixedHeight(44)
+        cancel.setCursor(Qt.PointingHandCursor)
+        cancel.clicked.connect(self.reject)
+
+        confirm = QPushButton(get_text(language, "logout_confirm"))
+        confirm.setObjectName("primaryButton")
+        confirm.setFixedHeight(44)
+        confirm.setCursor(Qt.PointingHandCursor)
+        confirm.clicked.connect(self.accept)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(12)
+        buttons.addWidget(cancel)
+        buttons.addWidget(confirm)
+
+        if language == "Tamil":
+            title.setStyleSheet("font-size:15px;")
+            message.setStyleSheet("font-size:12px;")
+
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(34, 28, 34, 28)
+        layout.setSpacing(12)
+        layout.addWidget(title)
+        layout.addWidget(message)
         layout.addStretch()
         layout.addLayout(buttons)
 
